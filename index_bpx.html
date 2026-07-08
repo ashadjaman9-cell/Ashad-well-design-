@@ -1,0 +1,1842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced 3D Well Completion Profile Tool - Ultra Pro</title>
+    <style>
+        /* CSS Variables */
+        :root {
+            --primary: #0f172a; --accent: #0284c7; --success: #10b981; --danger: #ef4444;
+            --bg-light: #f8fafc; --border: #cbd5e1; --text: #334155; --highlight: #fef08a;
+            /* Print Customizable Variables */
+            --rep-head-bg: #f1f5f9; --rep-head-txt: #334155; --rep-border: #cbd5e1;
+            --rep-section-bg: #0f172a; --rep-section-txt: #ffffff;
+            --print-font-size: 10px; --print-title-size: 20px; --print-density: 6px;
+        }
+
+        /* Base Resets & Layout */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: var(--bg-light); color: var(--text); padding: 12px; }
+        
+        /* Modal Styles */
+        #auth-modal { position: fixed; inset: 0; background: #0f172a; display: flex; justify-content: center; align-items: center; z-index: 3000; }
+        #startup-modal { position: fixed; inset: 0; background: rgba(15,23,42,0.8); backdrop-filter: blur(5px); display: none; justify-content: center; align-items: center; z-index: 2000; transition: all 0.3s ease; }
+        #cloud-files-modal { position: fixed; inset: 0; background: rgba(15,23,42,0.8); backdrop-filter: blur(5px); display: none; justify-content: center; align-items: center; z-index: 2500; transition: all 0.3s ease; }
+        
+        .modal-content { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 16px; text-align: center; max-width: 600px; width: 95%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.5); }
+        .modal-content h2 { color: var(--primary); margin-bottom: 8px; font-size: 21px; font-weight: 800; letter-spacing: -0.5px; }
+        
+        .btn-panel { display: flex; gap: 15px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
+        .saved-list-container { list-style: none; max-height: 120px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 5px; background: #f8fafc; text-align: left; }
+        .saved-list-container li { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #e2e8f0; font-size: 12px; background: white; margin-bottom: 4px; border-radius: 6px; transition: transform 0.2s; }
+        .saved-list-container li:hover { transform: translateX(4px); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+        /* UI Buttons */
+        .btn { padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); position: relative; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .btn:hover { opacity: 0.95; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .btn:active { transform: translateY(0); }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-cloud { background: #0ea5e9; color: white; }
+        .btn-warning { background: #eab308; color: white; }
+        .btn-excel { background: #16a34a; color: white; }
+        .btn-danger { background: var(--danger); color: white; padding: 4px 8px; font-size: 11px; }
+        .btn-secondary { background: #e2e8f0; color: var(--primary); }
+        .btn-unit { background: #8b5cf6; color: white; }
+        .btn-xs { padding: 4px 8px; font-size: 10px; border-radius: 4px; }
+
+        /* Main Application Grid */
+        .app-container { display: grid; grid-template-columns: 600px 1fr; gap: 12px; max-width: 1800px; margin: 0 auto; height: calc(100vh - 40px); }
+        header { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; background: var(--primary); color: white; padding: 12px 20px; border-radius: 10px; margin-bottom: 3px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); flex-wrap: wrap; gap: 10px; }
+        
+        .input-panel { background: white; padding: 16px; border-radius: 10px; overflow-y: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid var(--border); height: 100%; transition: all 0.3s ease; }
+        .input-panel::-webkit-scrollbar { width: 6px; }
+        .input-panel::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        
+        .output-panel { background: white; padding: 24px; border-radius: 10px; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid var(--border); display: grid; grid-template-columns: 1fr 380px; gap: 20px; height: 100%; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        /* Input Folders */
+        .folder { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; overflow: hidden; transition: all 0.3s ease; }
+        .folder-header { background: #f8fafc; padding: 10px 14px; font-size: 13px; font-weight: 700; color: var(--primary); cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s; }
+        .folder-header:hover { background: #f1f5f9; padding-left: 18px; }
+        .folder-content { padding: 14px; display: none; background: #fff; border-top: 1px solid #e2e8f0; }
+        .folder.active { box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-color: #94a3b8; }
+        .folder.active .folder-content { display: block; }
+
+        /* Utility Grids */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .grid-6 { display: grid; grid-template-columns: 0.8fr 1fr 1fr 1fr 1fr 1fr; gap: 8px; }
+        
+        /* Form Controls */
+        .form-group { margin-bottom: 8px; }
+        label { display: block; font-size: 10px; font-weight: 700; margin-bottom: 4px; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;}
+        input, select { width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 11px; background: #f8fafc; transition: all 0.2s; }
+        input:focus, select:focus { outline: none; border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1); }
+        .invalid-input { border: 2px solid var(--danger) !important; background-color: #fef2f2 !important; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important; }
+
+        /* Input Tables */
+        .item-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 8px; font-size: 10px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
+        .item-table th, .item-table td { border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); padding: 6px; text-align: center; vertical-align: middle; }
+        .item-table th { background: #f1f5f9; font-weight: bold; color: #1e293b; text-transform: uppercase; font-size: 9px; letter-spacing: 0.5px; }
+        .item-table input, .item-table select { width: 100%; padding: 4px; text-align: center; border: 1px solid transparent; background: transparent; border-radius: 4px; transition: border 0.2s; }
+        .item-table input:focus { border: 1px solid var(--accent); background: #fff; }
+        .item-table input[type="color"] { padding: 0; width: 24px; height: 24px; cursor: pointer; border-radius: 4px; border: 1px solid #cbd5e1; }
+
+        /* Output Report Styling */
+        .report-section-title { font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--rep-section-txt); background: var(--rep-section-bg); padding: 6px 12px; margin-top: 12px; margin-bottom: 6px; border-radius: 6px; letter-spacing: 0.8px; transition: all 0.3s; }
+        .report-table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 8px; transition: all 0.3s; }
+        .report-table th, .report-table td { border: 1px solid var(--rep-border); padding: 6px 8px; text-align: left; }
+        .report-table th { background: var(--rep-head-bg); font-weight: 700; color: var(--rep-head-txt); width: 25%; text-transform: uppercase; font-size: 9px; letter-spacing: 0.5px; }
+        
+        /* Themes */
+        .modern-layout .report-table th, .modern-layout .report-table td { border: none; border-bottom: 1px solid var(--rep-border); padding: 8px; }
+        .modern-layout .report-section-title { background: transparent; color: var(--rep-section-bg); border-bottom: 2px solid var(--rep-section-bg); border-radius: 0; padding-left: 0; font-size: 12px; }
+        .classic_pro { font-family: 'Times New Roman', serif !important; }
+        .classic_pro .report-section-title { background: #333; color: #fff; border-radius: 0; font-size: 13px; font-weight: bold; }
+        .classic_pro .report-table th, .classic_pro .report-table td { border: 1px solid #000; }
+        .corporate_trust { background: #ffffff !important; font-family: 'Georgia', serif !important; }
+        .corporate_trust .report-section-title { background: #1e40af; color: #fff; text-align: center; }
+        
+        /* Layout Print Settings */
+        .layout-print-2d-tech .report-table th, .layout-print-2d-tech .report-table td { font-family: monospace; border: 1px solid #475569; }
+        .layout-print-2d-tech .report-section-title { background: #e2e8f0; color: #0f172a; border-left: 4px solid #0f172a; }
+
+        /* SVG Schematic Container */
+        .schematic-container { 
+            border: 2px solid var(--primary); border-radius: 10px; background: white; 
+            display: flex; flex-direction: column; align-items: center; position: sticky; 
+            top: 15px; height: calc(100% - 10px); box-sizing: border-box; overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08); transition: all 0.4s ease;
+        }
+        #schematic-svg { width: 100%; height: 100%; display: block; transition: background 0.5s ease; }
+
+        .interactive-item { cursor: grab; outline: none; transform-origin: center; }
+        .interactive-item:active { cursor: grabbing; }
+        .interactive-item:hover { filter: drop-shadow(0px 6px 12px rgba(2, 132, 199, 0.6)); z-index: 100; }
+        .ext-overlay-image { cursor: move; pointer-events: all; }
+
+        @media print {
+            @page { size: A4 portrait; margin: 5mm; }
+            html, body { height: 100vh; max-height: 100vh; overflow: hidden !important; margin: 0; padding: 0; background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .no-print { display: none !important; }
+            .app-container { display: block; height: 100vh; width: 100%; gap: 0; }
+            .output-panel { display: grid !important; grid-template-columns: 1fr 340px !important; gap: 10px !important; border: none !important; box-shadow: none !important; padding: 0 !important; width: 100% !important; height: 98vh !important; max-height: 285mm !important; overflow: hidden !important; }
+            .report-table th, .report-table td { padding: var(--print-density) !important; font-size: var(--print-font-size) !important; line-height: 1.2; }
+            .report-table th { font-size: calc(var(--print-font-size) - 1px) !important; }
+            .report-section-title { font-size: calc(var(--print-font-size) + 1px) !important; padding: 3px 6px !important; margin-top: 4px !important; margin-bottom: 3px !important; border-radius: 3px !important; page-break-after: avoid; }
+            .report-table { page-break-inside: avoid; }
+            h1 { font-size: var(--print-title-size) !important; margin-bottom: 2px !important; }
+            .header-info-bar span { font-size: var(--print-font-size) !important; }
+            .schematic-container { border: 1px solid var(--primary) !important; border-radius: 4px !important; height: 97% !important; max-height: 275mm !important; overflow: hidden !important; box-shadow: none !important; position: relative !important; top: 0 !important; page-break-inside: avoid !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <datalist id="apiGrades"><option value="H-40"><option value="J-55"><option value="K-55"><option value="M-65"><option value="L-80"><option value="N-80"><option value="C-90"><option value="T-95"><option value="C-110"><option value="P-110"><option value="Q-125"></datalist>
+    <datalist id="apiThreads"><option value="8RD"><option value="BTC"><option value="LTC"><option value="STC"><option value="VAM TOP"><option value="TenarisHydril"><option value="Premium"><option value="CS"><option value="PH6"></datalist>
+
+    <div id="auth-modal">
+        <div class="modal-content" style="max-width: 400px; padding: 40px 30px;">
+            <h2 style="font-size: 24px; margin-bottom: 5px;">System Login</h2>
+            <p style="font-size: 12px; color: #64748b; margin-bottom: 25px;">প্রবেশ করতে আপনার ইমেইল ও পাসওয়ার্ড দিন</p>
+            
+            <div class="form-group" style="text-align: left; margin-bottom: 15px;">
+                <label style="font-size: 11px;">Email Address</label>
+                <input type="email" id="auth-email" placeholder="example@email.com" style="padding: 10px; font-size: 14px;">
+            </div>
+            <div class="form-group" style="text-align: left; margin-bottom: 20px;">
+                <label style="font-size: 11px;">Password</label>
+                <input type="password" id="auth-password" placeholder="••••••••" style="padding: 10px; font-size: 14px;">
+            </div>
+            
+            <button class="btn btn-success" style="width: 100%; padding: 12px; font-size: 14px; justify-content: center; margin-bottom: 10px;" onclick="FirebaseAuthManager.loginWithEmail()">লগইন করুন (Login)</button>
+            <button class="btn btn-secondary" style="width: 100%; padding: 12px; font-size: 14px; justify-content: center; margin-bottom: 20px;" onclick="FirebaseAuthManager.signUpWithEmail()">নতুন একাউন্ট তৈরি করুন (Sign Up)</button>
+            
+            <div style="display: flex; align-items: center; margin: 15px 0;">
+                <div style="flex-grow: 1; height: 1px; background: #cbd5e1;"></div>
+                <span style="padding: 0 10px; font-size: 12px; color: #64748b; font-weight: bold;">OR</span>
+                <div style="flex-grow: 1; height: 1px; background: #cbd5e1;"></div>
+            </div>
+
+            <button class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 14px; justify-content: center;" onclick="FirebaseAuthManager.loginWithGoogle()">Google দিয়ে লগইন করুন</button>
+        </div>
+    </div>
+
+    <div id="startup-modal">
+        <div class="modal-content">
+            <h2>Well Engineering System Pro</h2>
+            <div class="btn-panel">
+                <button class="btn btn-primary" onclick="AppController.init('new')">🆕 New Well Profile</button>
+                <button class="btn btn-secondary" onclick="AppController.init('demo')">💡 Load Demo Data</button>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <div style="text-align: left; font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #475569;">📂 Local Saved Profiles:</div>
+                    <ul id="saved-list" class="saved-list-container"></ul>
+                </div>
+                <div>
+                    <div style="text-align: left; font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #0ea5e9;">☁️ Cloud Saved Profiles:</div>
+                    <ul id="cloud-saved-list" class="saved-list-container">
+                        <li style="color:#ef4444; font-size:11px; padding:8px;">লোড হচ্ছে...</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="cloud-files-modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                <h2 style="margin:0;">📂 Cloud Saved Files</h2>
+                <button class="btn btn-danger btn-xs" onclick="document.getElementById('cloud-files-modal').style.display='none'">Close</button>
+            </div>
+            <div style="text-align: left; font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #0ea5e9;">আপনার ক্লাউডে সংরক্ষিত ফাইলসমূহ:</div>
+            <ul id="active-cloud-list" class="saved-list-container" style="max-height: 300px; padding: 10px;">
+                <li style="color:#ef4444; font-size:11px; padding:8px;">লোড হচ্ছে...</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="app-container">
+        
+        <header class="no-print">
+            <div style="display:flex; align-items:center; gap:15px;">
+                <h2 style="font-size: 16px; font-weight: 800; letter-spacing: 0.5px;">Advanced Subsurface Profiler - Ultra Pro</h2>
+                <button id="unit-toggle-btn" class="btn btn-unit" onclick="UnitManager.toggle()">📏 Unit: Meter (m)</button>
+            </div>
+            
+            <div id="auth-panel" style="display: flex; align-items: center; gap: 10px; margin-right: auto; margin-left: 20px;">
+                <span id="user-info" style="font-size: 12px; font-weight: bold; color: #fef08a;"></span>
+                <button id="logout-btn" class="btn btn-danger" onclick="FirebaseAuthManager.logout()">🚪 Logout</button>
+            </div>
+
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-secondary" onclick="ExportManager.syncWithEnterpriseAPI()">🔗 API Sync</button>
+                <button class="btn btn-secondary" onclick="location.reload()">🔄 Main</button>
+                <button class="btn btn-success" onclick="StorageManager.save()">💾 Local Save</button>
+                <button class="btn btn-cloud" onclick="StorageManager.saveToCloud()">☁️ Cloud Save</button>
+                <button class="btn btn-cloud" onclick="AppController.loadCloudSavedList(); document.getElementById('cloud-files-modal').style.display='flex'">📂 Show Files</button>
+                <button class="btn btn-warning" onclick="window.print()">🖨️ Print</button>
+            </div>
+        </header>
+
+        <div class="input-panel no-print" id="main-inputs">
+            
+            <div class="folder active" id="folder-1">
+                <div class="folder-header" onclick="UIHelper.toggleFolder(this)"><span>1. General Well Info & Logos</span></div>
+                <div class="folder-content">
+                    <div class="grid-2" style="background:#f1f5f9; padding:10px; border-radius:8px; margin-bottom:10px; border: 1px dashed #cbd5e1;">
+                        <div class="form-group"><label>Left Logo</label><input type="file" id="logoLeftInput" accept="image/*" onchange="UIHelper.previewLogo('left', this)" style="background: white;"></div>
+                        <div class="form-group"><label>Right Logo</label><input type="file" id="logoRightInput" accept="image/*" onchange="UIHelper.previewLogo('right', this)" style="background: white;"></div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group"><label>Customer/Company</label><input type="text" id="custName" oninput="AppController.render()"></div>
+                        <div class="form-group"><label>Field Name</label><input type="text" id="fieldName" oninput="AppController.render()"></div>
+                        <div class="form-group"><label>Well No</label><input type="text" id="wellNo" oninput="AppController.render()"></div>
+                        <div class="form-group"><label>Report Date</label><input type="date" id="reportDate" oninput="AppController.render()"></div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; background:#f0f9ff; padding:10px; border:1px solid #bae6fd; border-radius:8px; margin:10px 0;">
+                        <div class="form-group">
+                            <label>Well Type</label>
+                            <select id="wellType" onchange="UIHelper.toggleWellTypeFields(); AppController.render()">
+                                <option value="Vertical">Vertical</option><option value="Deviated" selected>Deviated</option>
+                            </select>
+                        </div>
+                        <div class="form-group dev-field"><label>Max Inc (°)</label><input type="number" step="0.1" id="inclination" value="50" oninput="UIHelper.limit5(this); AppController.render()"></div>
+                        <div class="form-group dev-field"><label>KOP <span class="unit-lbl">(m)</span></label><input type="number" id="kopDepth" class="depth-val" value="200" oninput="UIHelper.limit5(this); AppController.render()"></div>
+                        <div class="form-group dev-field"><label>Azimuth (°)</label><input type="number" step="0.1" id="azimuth" value="0" oninput="UIHelper.limit5(this); AppController.render()"></div>
+                        <div class="form-group dev-field"><label>Scale Inc</label><input type="number" step="0.1" id="scaleInc" value="1.0" oninput="UIHelper.limit5(this); AppController.render()"></div>
+                        <div class="form-group dev-field"><label>Scale KOP</label><input type="number" step="0.1" id="scaleKop" value="1.0" oninput="UIHelper.limit5(this); AppController.render()"></div>
+                    </div>
+
+                    <div class="grid-4" style="background:#fffbeb; padding:10px; border:1px solid #fde68a; border-radius:8px; margin:10px 0;">
+                        <div class="form-group"><label>Spud Date</label><input type="date" id="spudDate" oninput="AppController.render()"></div>
+                        <div class="form-group"><label>Comp Date</label><input type="date" id="compDate" oninput="AppController.render()"></div>
+                        <div class="form-group"><label>TVD <span class="unit-lbl">(m)</span></label><input type="number" id="targetTvd" class="depth-val" oninput="UIHelper.limit5(this); AppController.render()"></div>
+                        <div class="form-group" id="mdContainer"><label>MD <span class="unit-lbl">(m)</span></label><input type="number" id="targetMd" class="depth-val" oninput="UIHelper.limit5(this); AppController.render()"></div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group"><label>Rig Name</label><input type="text" id="rigName" oninput="AppController.render()"></div>
+                        <div class="form-group"><label>Rig Floor Hgt<span class="unit-lbl">(m)</span></label><input type="number" id="rigFloor" class="depth-val" oninput="UIHelper.limit5(this); AppController.render()"></div>
+                    </div>
+                    <div style="border-top: 1px solid #e2e8f0; padding-top: 10px; margin-top: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-weight: 800; font-size: 10px; color: var(--accent);">CUSTOM WELL INFO</span>
+                            <button class="btn btn-secondary btn-xs" onclick="DynamicFields.add('f1')">➕ Add Field</button>
+                        </div>
+                        <div id="f1-custom-fields"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="folder active" id="folder-2">
+                <div class="folder-header" onclick="UIHelper.toggleFolder(this)"><span>2. Casing & Tubing Data</span></div>
+                <div class="folder-content">
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-weight: 800; font-size: 11px; color: var(--accent);">CASING CONFIGURATION:</span>
+                        <button class="btn btn-secondary btn-xs" onclick="TableManager.addRow('casing')">➕ Add Casing</button>
+                    </div>
+                    <table class="item-table" style="margin-bottom:14px;">
+                        <thead><tr style="background:#f1f5f9;"><th>Casing Type</th><th>Setting Depth<span class="unit-lbl">(m)</span></th><th>Weight</th><th>Grade</th><th>Thread</th><th style="width:25px;">X</th></tr></thead>
+                        <tbody id="casing-tbody"></tbody>
+                    </table>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-weight: 800; font-size: 11px; color: var(--accent);">LINER CASING:</span>
+                        <button class="btn btn-secondary btn-xs" onclick="TableManager.addRow('liner')">➕ Add Liner</button>
+                    </div>
+                    <table class="item-table" style="margin-bottom:14px;">
+                        <thead><tr style="background:#fffbeb;"><th>Liner Size</th><th>Top<span class="unit-lbl">(m)</span></th><th>Btm<span class="unit-lbl">(m)</span></th><th>Weight</th><th>Grade</th><th>Thread</th><th style="width:25px;">X</th></tr></thead>
+                        <tbody id="liner-tbody"></tbody>
+                    </table>
+
+                    <div class="grid-2" style="background:#fef08a; padding:8px; border-radius:6px; margin-top:8px; border: 1px solid #facc15;">
+                        <div class="form-group"><label>Shoe Size(in)</label><input type="text" id="shoeSize" placeholder="e.g. 9.625" oninput="AppController.render()"></div>
+                        <div class="form-group"><label>Shoe Depth<span class="unit-lbl">(m)</span></label><input type="number" id="shoeDepth" class="depth-val" placeholder="Depth..." oninput="UIHelper.limit5(this); AppController.render()"></div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px;">
+                        <span style="font-weight: 800; font-size: 11px; color: var(--accent);">TUBING MATRIX:</span>
+                        <button class="btn btn-secondary btn-xs" onclick="TableManager.addRow('tubing')">➕ Add</button>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="item-table" style="min-width: 600px;">
+                            <thead><tr><th>Size(inch)</th><th>Wt</th><th>Gr</th><th>Th</th><th>Btm<span class="unit-lbl">(m)</span></th><th>Coupling OD(in)</th><th>Coupling Len(m)</th><th>X</th></tr></thead>
+                            <tbody id="tubing-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="folder" id="folder-3">
+                <div class="folder-header" onclick="UIHelper.toggleFolder(this)">
+                    <span>3. Lithology & Perforation</span>
+                    <label style="margin:0; font-size:10px; color:var(--primary); cursor:pointer;" onclick="event.stopPropagation()"><input type="checkbox" id="showLitho" checked onchange="AppController.render()"> Show</label>
+                </div>
+                <div class="folder-content" style="padding: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 10px; font-weight: 800; color: var(--danger);">PERFORATION ZONES</span>
+                        <button class="btn btn-danger btn-xs" onclick="TableManager.addRow('perf')">➕ Add Perf</button>
+                    </div>
+                    <table class="item-table" style="margin-bottom:14px; border: 1px solid var(--danger);">
+                        <thead><tr style="background:#fee2e2;"><th>Top <span class="unit-lbl">(m)</span></th><th>Bottom <span class="unit-lbl">(m)</span></th><th style="width:25px;">X</th></tr></thead>
+                        <tbody id="perf-tbody"></tbody>
+                    </table>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+                        <span style="font-weight: 800; font-size: 11px; color: var(--accent);">LITHOLOGY / FORMATIONS</span>
+                        <button class="btn btn-primary btn-xs" onclick="TableManager.addRow('litho')">➕ Add Litho</button>
+                    </div>
+                    <table class="item-table">
+                        <thead><tr style="background:#e0f2fe;"><th>Top <span class="unit-lbl">(m)</span></th><th>Bottom <span class="unit-lbl">(m)</span></th><th>Formation Name</th><th style="width:25px;">X</th></tr></thead>
+                        <tbody id="litho-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="folder" id="folder-4">
+                <div class="folder-header" onclick="UIHelper.toggleFolder(this)"><span>4. Packer & Tail Pipe Assembly</span></div>
+                <div class="folder-content" style="padding: 10px;">
+                    <div style="display: flex; justify-content: flex-end; margin-bottom: 10px;"><button class="btn btn-warning btn-xs" onclick="TableManager.addRow('bps')">➕ Add Plug</button></div>
+                    
+                    <table class="item-table" id="bp-table" style="display:none; margin-bottom:14px; border: 1px solid #facc15;">
+                        <thead>
+                            <tr style="background:#fef08a;"><th colspan="7">PLUGS (Bridge/Cement)</th></tr>
+                            <tr><th style="width:25px;">Sl.</th><th>Type</th><th>Size</th><th>Top<span class="unit-lbl">(m)</span></th><th>Btm<span class="unit-lbl">(m)</span></th><th>Clr</th><th>X</th></tr>
+                        </thead>
+                        <tbody id="bp-tbody"></tbody>
+                    </table>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+                        <span style="font-weight: 800; font-size: 11px; color: var(--accent);">TAIL PIPE TOOLS</span>
+                        <button class="btn btn-success btn-xs" onclick="TableManager.addRow('packer')">➕ Add Tool</button>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="item-table" style="min-width: 650px;">
+                            <thead><tr><th style="width:25px;">Sl.</th><th style="width:20px;">C</th><th style="width:110px;">Name</th><th>Desc.</th><th style="width:60px;">Top<span class="unit-lbl">(m)</span></th><th style="width:60px;">Btm<span class="unit-lbl">(m)</span></th><th style="width:60px;">Max OD(inc.)</th><th style="width:60px;">Min ID(inc.)</th><th style="width:20px;">X</th></tr></thead>
+                            <tbody id="packer-items-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="folder" id="folder-5">
+                <div class="folder-header" onclick="UIHelper.toggleFolder(this)">
+                    <span>5. Well Testing</span>
+                    <label style="margin:0; font-size:10px; color:var(--primary); cursor:pointer;" onclick="event.stopPropagation()"><input type="checkbox" id="showTest" checked onchange="AppController.render()"> Show</label>
+                </div>
+                <div class="folder-content">
+                    <div class="grid-2"><div class="form-group"><label>Choke Size</label><input type="text" id="testChoke" oninput="AppController.render()"></div><div class="form-group"><label>Flow Rate (mmscfd)</label><input type="text" id="testFlowRate" oninput="AppController.render()"></div></div>
+                    <div class="grid-2"><div class="form-group"><label>Flowing Pres (psi)</label><input type="text" id="testFlowPres" oninput="AppController.render()"></div><div class="form-group"><label>BHP (psi)</label><input type="text" id="testBhp" oninput="AppController.render()"></div></div>
+                    <div class="grid-2">
+                        <div class="form-group"><label>Bottom Hole Temp. (°F)</label><input type="text" id="testBht" oninput="AppController.render()"></div>
+                        <div class="form-group"><label>Surface Shut In Pres. (psi)</label><input type="text" id="testSip" oninput="AppController.render()"></div>
+                    </div>
+                    
+                    <div style="border-top: 1px solid #e2e8f0; padding-top: 10px; margin-top: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-weight: 800; font-size: 10px; color: var(--accent);">CUSTOM TESTING PARAMS</span>
+                            <button class="btn btn-secondary btn-xs" onclick="DynamicFields.add('f5')">➕ Add Field</button>
+                        </div>
+                        <div id="f5-custom-fields"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="folder" id="folder-6">
+                <div class="folder-header" onclick="UIHelper.toggleFolder(this)"><span>6. Completion String Elements</span></div>
+                <div class="folder-content" style="padding: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-weight: 800; font-size: 11px; color: var(--accent);">STRING ELEMENTS</span>
+                        <button class="btn btn-primary btn-xs" onclick="TableManager.addRow('string')">➕ Add Element</button>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="item-table" style="min-width: 650px;">
+                            <thead><tr><th style="width:25px;">Sl.</th><th style="width:20px;">C</th><th style="width:110px;">Name</th><th>Desc.</th><th style="width:60px;">Top<span class="unit-lbl">(m)</span></th><th style="width:60px;">Btm<span class="unit-lbl">(m)</span></th><th style="width:60px;">Max OD(inc.)</th><th style="width:60px;">Min ID(inc.)</th><th style="width:20px;">X</th></tr></thead>
+                            <tbody id="input-items-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="folder" id="folder-7">
+                <div class="folder-header" onclick="UIHelper.toggleFolder(this)"><span>7. Diagram Indicators (Labels)</span></div>
+                <div class="folder-content">
+                    <div class="grid-2" style="margin-bottom:10px;">
+                        <div class="form-group">
+                            <label>Indicator Shape</label>
+                            <select id="lblShape" onchange="AppController.render()">
+                                <option value="line">Line + Box</option>
+                                <option value="direct_line">Direct Touch Line + Box</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Indicator Size (Scale)</label>
+                            <input type="number" id="lblSize" value="1.0" step="0.1" min="0.5" max="3" oninput="AppController.render()">
+                        </div>
+                    </div>
+                    <div style="font-size:10.5px; margin-bottom:8px; color:#475569;">Select tools to indicate on the diagram:</div>
+                    <div id="indicator-list" class="grid-2" style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #cbd5e1; max-height: 200px; overflow-y: auto;"></div>
+                </div>
+            </div>
+
+            <div class="folder" id="folder-8">
+                <div class="folder-header" onclick="UIHelper.toggleFolder(this)" style="background:#fce7f3; color:#be185d;"><span>8. Print Styling & Report Formats (Pro & 2D)</span></div>
+                <div class="folder-content">
+                    <div class="grid-2" style="margin-bottom: 10px;">
+                        <div class="form-group"><label>Header Color</label><input type="color" id="colHeadBg" value="#f1f5f9" onchange="UIHelper.updateStyles()"></div>
+                        <div class="form-group"><label>Header Text</label><input type="color" id="colHeadTxt" value="#334155" onchange="UIHelper.updateStyles()"></div>
+                    </div>
+                    <div class="grid-2" style="margin-bottom: 10px;">
+                        <div class="form-group"><label>Section Title Bg</label><input type="color" id="colSecBg" value="#0f172a" onchange="UIHelper.updateStyles()"></div>
+                        <div class="form-group"><label>Table Border</label><input type="color" id="colBorder" value="#cbd5e1" onchange="UIHelper.updateStyles()"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Report Template Style</label>
+                        <select id="layoutStyle" onchange="UIHelper.updateStyles()" style="font-weight: 600; color: #be185d; padding: 10px; border: 2px solid #be185d;">
+                            <optgroup label="Popular 3D / Pro Reports">
+                                <option value="standard">1. Standard Professional</option>
+                                <option value="modern">2. Modern Minimalist</option>
+                                <option value="classic_pro">3. Classic BAPEX Standard</option>
+                                <option value="corporate_trust">4. Corporate Trust Report</option>
+                            </optgroup>
+                            <optgroup label="Famous Drilling Company 2D Templates (New)">
+                                <option value="layout-print-2d-tech" style="font-weight:bold;">🌟 5. 2D API Standard Print</option>
+                                <option value="layout-print-2d-tech" style="font-weight:bold;">🌟 10. 2D Monochrome Schematics</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="folder" id="folder-9">
+                <div class="folder-header" onclick="UIHelper.toggleFolder(this)" style="background:#dcfce7; color:#166534;"><span>9. Custom Overlay / External Diagram</span></div>
+                <div class="folder-content">
+                    <p style="font-size:10px; color:#64748b; margin-bottom:10px;">Upload an externally generated diagram or image (PNG, JPG, SVG) to overlay onto the wellbore.</p>
+                    <div class="form-group">
+                        <label>Upload Diagram Overlay</label>
+                        <input type="file" id="externalDiagramInput" accept="image/*, .svg" onchange="ExternalOverlay.handleUpload(this)" style="background: white; border: 1px dashed #16a34a; padding: 10px;">
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <button class="btn btn-warning btn-xs" onclick="ExternalOverlay.clear()">🗑️ Clear Overlay</button>
+                        <button class="btn btn-secondary btn-xs" onclick="ExternalOverlay.resetTransform()">🔄 Reset Size/Pos</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="folder" id="folder-10">
+                <div class="folder-header" onclick="UIHelper.toggleFolder(this)" style="background:#e0e7ff; color:#4338ca;"><span>10. Diagram Visuals & Core Material (Pro & 2D)</span></div>
+                <div class="folder-content">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Wellbore Width Scale</label>
+                            <input type="number" id="boreWidth" value="1.0" step="any" min="0.1" max="1000" oninput="AppController.render()">
+                        </div>
+                        <div class="form-group">
+                            <label>Background Theme</label>
+                            <select id="bgTheme" onchange="AppController.render()" style="border: 2px solid #4338ca; padding: 6px;">
+                                <option value="none">Clean White (Standard)</option>
+                                <option value="grid_light">Light Engineering Grid</option>
+                                <option value="light_blue">Light Blue Tint</option>
+                                <option value="light_green">Light Green Tint</option>
+                                <option value="light_yellow">Light Yellow Tint</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group" style="margin-top: 10px;">
+                        <label>Wellbore Material Render Style</label>
+                        <select id="casingRenderStyle" onchange="AppController.render()" style="border: 2px solid #4338ca; padding: 6px; font-weight: bold;">
+                            <optgroup label="Popular 3D Materials">
+                                <option value="premium_steel">🚀 1. Premium Steel Cylinder (Most Popular)</option>
+                                <option value="glass">🚀 2. Transparent Glass / X-Ray</option>
+                                <option value="chrome_polished">3. Chrome Polished Silver</option>
+                                <option value="standard">4. Standard Flat Matte</option>
+                            </optgroup>
+                            <optgroup label="Famous Drilling Company 2D Materials (New)">
+                                <option value="2d_flat_color" style="font-weight:bold;">🌟 5. 2D Flat Color Base</option>
+                                <option value="2d_outline_black" style="font-weight:bold;">🌟 6. 2D Outline Black Stroke</option>
+                                <option value="2d_api_stroke" style="font-weight:bold;">🌟 7. 2D API Minimal Stroke</option>
+                                <option value="2d_tech_ink" style="font-weight:bold;">🌟 10. 2D Tech Ink Solid</option>
+                                <option value="2d_matte_finish" style="font-weight:bold;">🌟 12. 2D Matte Finish Corporate</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="folder" id="folder-13">
+                <div class="folder-header" onclick="UIHelper.toggleFolder(this)" style="background:#f3e8ff; color:#7e22ce;"><span>13. Depth/Length Scaling (Dynamic Stretching)</span></div>
+                <div class="folder-content" style="padding: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 10px;">
+                        <span style="font-weight: 800; font-size: 11px; color: #7e22ce;">ENLARGE WIDTH OF WHOLE DIAGRAM (GLOBAL)</span>
+                        <div style="display:flex; align-items:center; gap:5px;">
+                            <label style="font-size:9px; font-weight:bold; color:#7e22ce; margin:0;">Multiplier (e.g. 100):</label>
+                            <input type="number" id="globalWidthScale" value="1.0" step="any" min="0.1" max="1000" oninput="AppController.render()" style="width: 90px; padding: 4px; font-size: 11px; border: 2px solid #7e22ce; border-radius: 4px; text-align: center; font-weight:bold;">
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; margin-top: 10px;">
+                        <span style="font-weight: 800; font-size: 11px; color: var(--success);">ENLARGE LENGTH (Y-AXIS) OF DIAGRAM</span>
+                        <button class="btn btn-success btn-xs" onclick="TableManager.addRow('enlarge')">➕ Add Enlarge</button>
+                    </div>
+                    <table class="item-table" style="margin-bottom:14px; border: 1px solid var(--success);">
+                        <thead><tr style="background:#dcfce7;"><th>From <span class="unit-lbl">(m)</span></th><th>To <span class="unit-lbl">(m)</span></th><th title="Scale multiplier (e.g. 5 for 5x bigger)" style="width: 100px;">Scale (Multiplier)</th><th style="width:25px;">X</th></tr></thead>
+                        <tbody id="enlarge-tbody"></tbody>
+                    </table>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+                        <span style="font-weight: 800; font-size: 11px; color: var(--danger);">COMPRESS LENGTH (Y-AXIS) OF DIAGRAM</span>
+                        <button class="btn btn-danger btn-xs" onclick="TableManager.addRow('compress')">➕ Add Compress</button>
+                    </div>
+                    <table class="item-table" style="border: 1px solid var(--danger);">
+                        <thead><tr style="background:#fee2e2;"><th>From <span class="unit-lbl">(m)</span></th><th>To <span class="unit-lbl">(m)</span></th><th title="Scale multiplier (e.g. 0.5 for half size)" style="width: 100px;">Scale (Multiplier)</th><th style="width:25px;">X</th></tr></thead>
+                        <tbody id="compress-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="folder" id="folder-14">
+                <div class="folder-header" onclick="UIHelper.toggleFolder(this)" style="background:#ffedd5; color:#c2410c;"><span>14. Casing & Wellbore Geometry Profile (Pro & 2D)</span></div>
+                <div class="folder-content">
+                    <p style="font-size:10px; color:#64748b; margin-bottom:8px;">সিলেক্ট করে ক্যাসিংয়ের আকৃতি (Structural Profile) পরিবর্তন করুন।</p>
+                    <div class="form-group">
+                        <label>Casing Structural Geometry</label>
+                        <select id="casingGeometry" onchange="AppController.render()" style="font-weight: bold; color: #c2410c; border: 2px solid #c2410c; padding: 10px;">
+                            <optgroup label="Popular 3D Geometric Profiles">
+                                <option value="standard">1. Standard Straight Pipe</option>
+                            </optgroup>
+                            <optgroup label="Famous Drilling Company 2D Shapes (New)">
+                                <option value="2d_buttress_collar" style="font-weight:bold;">🌟 6. 2D Buttress Collar Profile</option>
+                                <option value="2d_premium_thread" style="font-weight:bold;">🌟 7. 2D Premium Thread Outline</option>
+                                <option value="2d_welded_seam" style="font-weight:bold;">🌟 12. 2D Welded Seam Vector</option>
+                                <option value="2d_flanged_neck" style="font-weight:bold;">🌟 13. 2D Flanged Neck Joint</option>
+                                <option value="2d_centralizer" style="font-weight:bold;">🌟 14. 2D Centralizer Profile</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="folder" id="folder-15">
+                <div class="folder-header" onclick="UIHelper.toggleFolder(this)" style="background:#fef9c3; color:#a16207;"><span>15. Advanced Downhole Tools Shapes (Pro & 2D)</span></div>
+                <div class="folder-content">
+                    <p style="font-size:10px; color:#64748b; margin-bottom:8px;">String Components এবং Tail Pipe Tool-গুলোর আকৃতি (Shape) ও ডিজাইন পরিবর্তন করুন।</p>
+                    <div class="form-group">
+                        <label>Tool Components Global Shape Style</label>
+                        <select id="toolShapeStyle" onchange="AppController.render()" style="font-weight: bold; color: #a16207; border: 2px solid #a16207; padding: 10px;">
+                            <optgroup label="Popular 3D Shapes">
+                                <option value="classic_beveled">🚀 1. Classic Beveled (3D Borders)</option>
+                                <option value="ultra_pro_cyl">🚀 2. Ultra Pro Cylindrical</option>
+                                <option value="standard">4. Standard Flat Solid</option>
+                            </optgroup>
+                            <optgroup label="Premium Metallic 2D Shapes (New)">
+                                <option value="2d_metallic_solid" style="font-weight:bold;">✨ 8. 2D Metallic Solid (Chrome)</option>
+                                <option value="2d_metallic_brushed" style="font-weight:bold;">✨ 9. 2D Metallic Brushed (Steel)</option>
+                                <option value="2d_metallic_industrial" style="font-weight:bold;">✨ 10. 2D Heavy Industrial Base</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="folder" id="folder-16">
+                <div class="folder-header" onclick="UIHelper.toggleFolder(this)" style="background:#ccfbf1; color:#0f766e;">
+                    <span>16. Specialized Casing Shoe</span>
+                </div>
+                <div class="folder-content">
+                    <p style="font-size:10px; color:#64748b; margin-bottom:8px;">কেসিং সু (Casing Shoe) এর আকৃতি পরিবর্তন করুন।</p>
+                    <div class="form-group">
+                        <label>Casing Shoe Shape</label>
+                        <select id="casingShoeStyle" onchange="AppController.render()" style="font-weight: bold; color: #0f766e; border: 2px solid #0f766e; padding: 10px;">
+                            <option value="standard">1. Standard Pointed</option>
+                            <option value="rounded_nose" style="font-weight:bold;">🌟 2. Rounded Convex Nose</option>
+                            <option value="flat_bottom" style="font-weight:bold;">🌟 3. Flat Bottom Plate</option>
+                            <option value="stepped_shoe" style="font-weight:bold;">🌟 4. Stepped / Tiered Shoe</option>
+                            <option value="sawtooth_shoe" style="font-weight:bold;">🌟 5. Sawtooth / Milled Shoe</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="folder" id="folder-17">
+                <div class="folder-header" onclick="UIHelper.toggleFolder(this)" style="background:#e0f2fe; color:#0369a1;">
+                    <span>17. Custom Page Layout Visibility</span>
+                </div>
+                <div class="folder-content">
+                    <p style="font-size:10px; color:#64748b; margin-bottom:10px;">Select which sections to show or hide before printing the final layout.</p>
+                    <div class="grid-2">
+                        <label style="cursor:pointer; font-size:11px; font-weight:bold;"><input type="checkbox" id="shwGen" checked onchange="AppController.render()"> General Info Table</label>
+                        <label style="cursor:pointer; font-size:11px; font-weight:bold;"><input type="checkbox" id="shwCsg" checked onchange="AppController.render()"> Casing Config Table</label>
+                        <label style="cursor:pointer; font-size:11px; font-weight:bold;"><input type="checkbox" id="shwTub" checked onchange="AppController.render()"> Prod. Tubing Table</label>
+                        <label style="cursor:pointer; font-size:11px; font-weight:bold;"><input type="checkbox" id="shwLit" checked onchange="AppController.render()"> Lithology & Perf</label>
+                        <label style="cursor:pointer; font-size:11px; font-weight:bold;"><input type="checkbox" id="shwTst" checked onchange="AppController.render()"> Well Testing</label>
+                        <label style="cursor:pointer; font-size:11px; font-weight:bold;"><input type="checkbox" id="shwStr" checked onchange="AppController.render()"> String Elements</label>
+                        <label style="cursor:pointer; font-size:11px; font-weight:bold;"><input type="checkbox" id="shwPac" checked onchange="AppController.render()"> Packer Assembly</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="folder active" id="folder-19">
+                <div class="folder-header" onclick="UIHelper.toggleFolder(this)" style="background:#fce7f3; color:#be185d;">
+                    <span>19. প্রিন্ট পেজ কাস্টমাইজেশন (Print Settings)</span>
+                </div>
+                <div class="folder-content">
+                    <p style="font-size:10px; color:#64748b; margin-bottom:10px;">প্রিন্ট করার সময় ফন্ট সাইজ ও টাইটেল সাইজ পরিবর্তন করুন।</p>
+                    <div class="grid-3">
+                        <div class="form-group">
+                            <label>Text Font Size (px)</label>
+                            <input type="number" id="prnFontSize" value="10" oninput="UIHelper.limit5(this); UIHelper.updateStyles()">
+                        </div>
+                        <div class="form-group">
+                            <label>Title Font Size (px)</label>
+                            <input type="number" id="prnTitleSize" value="20" oninput="UIHelper.limit5(this); UIHelper.updateStyles()">
+                        </div>
+                        <div class="form-group">
+                            <label>Row Padding / Density</label>
+                            <input type="number" id="prnDensity" value="6" oninput="UIHelper.limit5(this); UIHelper.updateStyles()">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="output-panel" id="print-sheet">
+            
+            <div style="display:flex; flex-direction:column; gap:4px; z-index:10; position:relative;">
+                
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 3px solid var(--primary); padding-bottom: 10px; margin-bottom: 12px;">
+                    <img id="outLogoLeft" style="max-height: 50px; max-width: 90px; display: none;">
+                    <div style="text-align: center; flex-grow:1;">
+                        <h1 style="font-size: 20px; color: var(--primary); text-transform: uppercase; margin-bottom:8px; font-weight: 900; letter-spacing: 1px;">Well Completion Profile</h1>
+                        <div class="header-info-bar" style="font-size:10px; font-weight:800; display:flex; justify-content:center; gap:20px; color: #475569;">
+                            <span>FIELD: <span id="outFieldName">---</span></span>
+                            <span>WELL: <span id="outWellNo">---</span></span>
+                            <span>DATE: <span id="lblDate">---</span></span>
+                        </div>
+                    </div>
+                    <img id="outLogoRight" style="max-height: 50px; max-width: 90px; display: none;">
+                </div>
+
+                <div id="wrap-gen">
+                    <table class="report-table" id="out-general-table">
+                        <tr><th>Customer</th><td><span id="outCustName">---</span></td><th>Rig Name</th><td><span id="outRigName">---</span> (Floor: <span id="outRigFloor">---</span><span class="unit-lbl">m</span>)</td></tr>
+                        <tr><th>Trajectory</th><td><span id="outTraj">---</span></td><th>KOP</th><td><span id="outKop">---</span></td></tr>
+                        <tr><th>Spud Date</th><td><span id="outSpud">---</span></td><th>Completion Date</th><td><span id="outComp">---</span></td></tr>
+                        <tr><th>Depth</th><td colspan="3">TVD: <span id="outTVD">---</span> <span class="unit-lbl">m</span><span id="outMDWrap"> | MD: <span id="outMD">---</span> <span class="unit-lbl">m</span></span></td></tr>
+                    </table>
+                </div>
+
+                <div id="wrap-csg">
+                    <div class="report-section-title">Casing Configuration</div>
+                    <table class="report-table" id="out-casing-table">
+                        <thead><tr><th>Casing Type</th><th>Depth <span class="unit-lbl">(m)</span></th><th>Weight</th><th>Grade</th><th>Thread</th></tr></thead>
+                        <tbody id="out-casing-tbody"></tbody>
+                    </table>
+                </div>
+
+                <div id="wrap-tub">
+                    <div class="report-section-title">Production Tubing Details</div>
+                    <table class="report-table" id="out-tubing-table">
+                        <thead><tr><th>Size (inch)</th><th>Btm Depth <span class="unit-lbl">(m)</span></th><th>Weight</th><th>Grade</th><th>Thread</th><th>Coupling OD(in)</th><th>Coupling Len(m)</th></tr></thead>
+                        <tbody id="out-tubing-tbody"></tbody>
+                    </table>
+                </div>
+
+                <div id="out-litho-section">
+                    <div class="report-section-title">Lithology & Perforation Depth</div>
+                    <table class="report-table">
+                        <tr><th>Perforation Zones</th><td style="color:var(--danger); font-weight:bold;" id="outPerf">---</td></tr>
+                        <tr><th>Lithology Zones</th><td id="outLitho">---</td></tr>
+                    </table>
+                </div>
+
+                <div id="out-test-section">
+                    <div class="report-section-title">Well Testing Parameters</div>
+                    <table class="report-table" id="out-test-table">
+                        <tr><th>Choke Size</th><td><span id="outChoke">---</span></td><th>Flow Rate</th><td><span id="outFlow">---</span> mmscfd</td></tr>
+                        <tr><th>Flowing Pressure</th><td><span id="outFP">---</span> psi</td><th>Bottom Hole Pres.</th><td><span id="outBHP">---</span> psi</td></tr>
+                        <tr><th>B.H. Temp.</th><td><span id="outBht">---</span> °F</td><th>Surface SIP</th><td><span id="outSip">---</span> psi</td></tr>
+                    </table>
+                </div>
+
+                <div id="wrap-str">
+                    <div class="report-section-title">Completion String Elements</div>
+                    <table class="report-table">
+                        <thead><tr><th style="width:20px; text-align:center;">Sl.</th><th style="width:12px; text-align:center;">C</th><th>Item Name</th><th>Remarks/Desc</th><th style="width:35px;">Top<span class="unit-lbl">(m)</span></th><th style="width:35px;">Btm<span class="unit-lbl">(m)</span></th><th style="width:35px;">Len<span class="unit-lbl">(m)</span></th><th style="width:25px;">Max OD(inc.)</th><th style="width:25px;">Min ID(inc.)</th></tr></thead>
+                        <tbody id="out-tools-tbody"></tbody>
+                    </table>
+                </div>
+                
+                <div id="wrap-pac">
+                    <div class="report-section-title">Packer & Tail Pipe Assembly</div>
+                    <table class="report-table">
+                        <thead><tr><th style="width:20px; text-align:center;">Sl.</th><th style="width:12px; text-align:center;">C</th><th>Item Name</th><th>Remarks/Desc</th><th style="width:35px;">Top<span class="unit-lbl">(m)</span></th><th style="width:35px;">Btm<span class="unit-lbl">(m)</span></th><th style="width:35px;">Len<span class="unit-lbl">(m)</span></th><th style="width:25px;">Max OD(inc.)</th><th style="width:25px;">Min ID(inc.)</th></tr></thead>
+                        <tbody id="out-packer-tbody"></tbody>
+                    </table>
+                </div>
+
+            </div>
+
+            <div class="schematic-container" style="position: relative;" id="schematic-wrapper">
+                
+                <div class="no-print" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.7); backdrop-filter: blur(4px); padding: 6px 10px; border: 1px dashed var(--accent); border-radius: 6px; font-size: 9px; font-weight: 800; color: var(--primary); z-index: 10; pointer-events: none; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                    🖱️ DRAG TO MOVE &nbsp;|&nbsp; 🖱️+⚙️ SCROLL TO RESIZE
+                </div>
+
+                <svg id="schematic-svg" viewBox="0 0 380 1100" preserveAspectRatio="none">
+                    <defs>
+                        <linearGradient id="overlay-3d" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#000" stop-opacity="0.5"/><stop offset="30%" stop-color="#fff" stop-opacity="0.4"/><stop offset="70%" stop-color="#fff" stop-opacity="0.1"/><stop offset="100%" stop-color="#000" stop-opacity="0.6"/></linearGradient>
+                        <linearGradient id="chrome-shine" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#334155"/><stop offset="40%" stop-color="#f8fafc"/><stop offset="50%" stop-color="#94a3b8"/><stop offset="60%" stop-color="#f8fafc"/><stop offset="100%" stop-color="#334155"/></linearGradient>
+                        <linearGradient id="grad-glass" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#0284c7" stop-opacity="0.7"/><stop offset="20%" stop-color="#e0f2fe" stop-opacity="0.9"/><stop offset="50%" stop-color="#e0f2fe" stop-opacity="0.2"/><stop offset="80%" stop-color="#e0f2fe" stop-opacity="0.9"/><stop offset="100%" stop-color="#0284c7" stop-opacity="0.7"/></linearGradient>
+                        <linearGradient id="grad-premium-steel" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#1e293b"/><stop offset="15%" stop-color="#94a3b8"/><stop offset="50%" stop-color="#f8fafc"/><stop offset="85%" stop-color="#94a3b8"/><stop offset="100%" stop-color="#1e293b"/></linearGradient>
+                        
+                        <linearGradient id="grad-metallic-solid" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#94a3b8"/><stop offset="50%" stop-color="#f8fafc"/><stop offset="100%" stop-color="#64748b"/></linearGradient>
+                        <linearGradient id="grad-metallic-brushed" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#e2e8f0"/><stop offset="25%" stop-color="#cbd5e1"/><stop offset="50%" stop-color="#f8fafc"/><stop offset="75%" stop-color="#cbd5e1"/><stop offset="100%" stop-color="#e2e8f0"/></linearGradient>
+
+                        <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="2" dy="4" stdDeviation="3" flood-color="#000" flood-opacity="0.25"/></filter>
+                        <pattern id="cement" patternUnits="userSpaceOnUse" width="8" height="8"><rect width="8" height="8" fill="#94a3b8" /><path d="M 2 2 L 3 3 M 6 6 L 7 7 M 2 6 L 3 5" stroke="#64748b" stroke-width="1"/><circle cx="2" cy="2" r="0.5" fill="#334155" /></pattern>
+                    </defs>
+                    <g id="external-diagram-layer"></g>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const $ = id => document.getElementById(id);
+        const val = id => $(id) ? $(id).value : '';
+        const numVal = id => parseFloat(val(id)) || 0;
+
+        const CONFIG = {
+            casingTypeOptions: ['30" Cond. Casing', '20" Surf. Casing', '13-3/8" Int. Casing', '9-5/8" Prod. Casing', 'Other'],
+            linerTypeOptions: ['7" Liner', '5" Liner', 'Other'],
+            tailPipeOptions: ["Permanent Packer", "Cement plug", "Bridge plug", "Mill out extention", "Seal bore extention", "Crossover", "Pup joint", "Flow coupling", "'X'Niple", "'R'Niple", "Perforation tube", "Wire line re entry guide", "Other"],
+            stringOpOptions: ["Tubing hanger", "Crossover", "Pup joint", "Flow coupling", "SCSSSV", "Production tube", "SSD", "No go locator", "Seal assembly", "Seal extention", "Mule shoe", "Other"],
+            itemColors: ["#e11d48", "#2563eb", "#16a34a", "#ca8a04", "#9333ea", "#ea580c", "#0d9488", "#4f46e5"],
+            scalePxPerInch: 3,
+            svgConfig: { canvasW: 380, startY: 30, centerX: 190, maxH: 1100 }
+        };
+
+        const UnitManager = {
+            isFeet: false,
+            toggle: () => {
+                UnitManager.isFeet = !UnitManager.isFeet;
+                const factor = UnitManager.isFeet ? 3.28084 : (1 / 3.28084);
+                
+                const depthInputs = document.querySelectorAll('input[type="number"].depth-val, .top-inp, .btm-inp');
+                depthInputs.forEach(inp => {
+                    if (inp.value && !isNaN(inp.value)) inp.value = (parseFloat(inp.value) * factor).toFixed(2);
+                });
+                
+                AppState.casings.forEach(c => { if(c.depth) c.depth = (parseFloat(c.depth) * factor).toFixed(2); });
+                AppState.liners.forEach(l => { 
+                    if(l.top) l.top = (parseFloat(l.top) * factor).toFixed(2); 
+                    if(l.btm) l.btm = (parseFloat(l.btm) * factor).toFixed(2); 
+                });
+                AppState.tubing.forEach(t => { if(t.depth) t.depth = (parseFloat(t.depth) * factor).toFixed(2); });
+                
+                document.querySelectorAll('.unit-lbl').forEach(lbl => lbl.innerText = UnitManager.isFeet ? '(ft)' : '(m)');
+                document.getElementById('unit-toggle-btn').innerText = UnitManager.isFeet ? '📏 Unit: Feet (ft)' : '📏 Unit: Meter (m)';
+                
+                TableManager.syncData();
+            }
+        };
+
+        const AppState = {
+            casings: [], liners: [], tubing: [], string: [], packer: [], bps: [], labels: {}, perfs: [], lithos: [], enlargeRules: [], compressRules: [],
+            externalOverlayDataUrl: null,
+            get allTools() { return [...this.string, ...this.packer, ...this.bps.filter(b => b.top !== '' && b.btm !== '')].sort((a, b) => a.sl - b.sl); }
+        };
+
+        const Validator = {
+            check: () => {
+                let isValid = true;
+                document.querySelectorAll('.depth-val, .top-inp, .btm-inp').forEach(inp => {
+                    inp.classList.remove('invalid-input');
+                    if (inp.value && parseFloat(inp.value) < 0) { 
+                        inp.classList.add('invalid-input'); isValid = false; 
+                    }
+                });
+                document.querySelectorAll('.item-table tbody tr').forEach(tr => {
+                    let top = tr.querySelector('.top-inp');
+                    let btm = tr.querySelector('.btm-inp');
+                    if(top && btm && top.value && btm.value) {
+                        if(parseFloat(top.value) > parseFloat(btm.value)) {
+                            top.classList.add('invalid-input'); btm.classList.add('invalid-input'); isValid = false;
+                        }
+                    }
+                });
+                return isValid;
+            }
+        };
+
+        const DynamicFields = {
+            f1: [], f5: [],
+            add: (type) => { DynamicFields[type].push({label: '', value: ''}); DynamicFields.renderInputs(type); AppController.render(); },
+            update: (type, idx, key, v) => { DynamicFields[type][idx][key] = v; AppController.render(); },
+            remove: (type, idx) => { DynamicFields[type].splice(idx, 1); DynamicFields.renderInputs(type); AppController.render(); },
+            renderInputs: (type) => {
+                const container = $(`${type}-custom-fields`);
+                container.innerHTML = DynamicFields[type].map((f, i) => `
+                    <div class="grid-6" style="margin-top:6px; grid-template-columns: 1fr 1fr 25px;">
+                        <input type="text" placeholder="Label Name" value="${esc(f.label)}" oninput="DynamicFields.update('${type}', ${i}, 'label', this.value)">
+                        <input type="text" placeholder="Value" value="${esc(f.value)}" oninput="DynamicFields.update('${type}', ${i}, 'value', this.value)">
+                        <button class="btn-danger btn-xs" onclick="DynamicFields.remove('${type}', ${i})">X</button>
+                    </div>
+                `).join('');
+            }
+        };
+
+        const UIHelper = {
+            limit5: (el) => { if(el.value.length > 8) el.value = el.value.slice(0, 8); },
+            toggleFolder: (header) => { header.parentElement.classList.toggle('active'); },
+            toggleWellTypeFields: () => {
+                const isVertical = val('wellType') === 'Vertical';
+                $('mdContainer').style.display = isVertical ? 'none' : 'block';
+                $('outMDWrap').style.display = isVertical ? 'none' : 'inline';
+                document.querySelectorAll('.dev-field').forEach(el => { el.style.display = isVertical ? 'none' : 'block'; });
+            },
+            toggleLithoInput: () => { AppController.render(); },
+            updateStyles: () => {
+                const root = document.documentElement;
+                root.style.setProperty('--rep-head-bg', val('colHeadBg') || '#f1f5f9');
+                root.style.setProperty('--rep-head-txt', val('colHeadTxt') || '#334155');
+                root.style.setProperty('--rep-section-bg', val('colSecBg') || '#0f172a');
+                root.style.setProperty('--rep-border', val('colBorder') || '#cbd5e1');
+                
+                let prnFont = val('prnFontSize') || '10';
+                let prnTitle = val('prnTitleSize') || '20';
+                let prnDensity = val('prnDensity') || '6';
+                root.style.setProperty('--print-font-size', prnFont + 'px');
+                root.style.setProperty('--print-title-size', prnTitle + 'px');
+                root.style.setProperty('--print-density', prnDensity + 'px');
+                
+                const sheet = $('print-sheet');
+                sheet.className = 'output-panel'; 
+                const layout = val('layoutStyle');
+                if(layout && layout !== 'standard') {
+                    sheet.classList.add(layout);
+                    if(layout === 'modern') sheet.classList.add('modern-layout');
+                }
+            },
+            previewLogo: (side, input) => {
+                if (input.files && input.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = e => { $(side === 'left' ? 'outLogoLeft' : 'outLogoRight').src = e.target.result; $(side === 'left' ? 'outLogoLeft' : 'outLogoRight').style.display = 'block'; }
+                    reader.readAsDataURL(input.files[0]);
+                }
+            },
+            handleDropdownChange: (sel) => {
+                const tr = sel.closest('tr');
+                const otherInp = tr.querySelector('.name-other');
+                otherInp.style.display = sel.value === 'Other' ? 'block' : 'none';
+                if(sel.value === 'Other') otherInp.focus();
+                TableManager.syncData();
+            }
+        };
+
+        const esc = s => (s||'').toString().replace(/"/g, '&quot;');
+
+        const TableManager = {
+            addRow: (type) => {
+                TableManager.syncData(); 
+                
+                const sl = AppState.allTools.length + 1;
+                let top = 0;
+                
+                if (type === 'casing') AppState.casings.push({ type: '9-5/8" Prod. Casing', otherValue: '', depth: '', wt: '', gr: '', th: '' });
+                else if (type === 'liner') AppState.liners.push({ size: '7" Liner', otherValue: '', top: '', btm: '', wt: '', gr: '', th: '' });
+                else if (type === 'tubing') AppState.tubing.push({ size: "3.5", wt: "9.2", gr: "P-110", th: "VAM", depth: "", coupOd: "", coupLen: "" }); 
+                else if (type === 'string') { 
+                    let prevBtm = AppState.string.length > 0 ? parseFloat(AppState.string[AppState.string.length - 1].btm) : NaN;
+                    top = !isNaN(prevBtm) ? prevBtm : 0;
+                    AppState.string.push(TableManager.createToolObj(sl, top, top + 15, CONFIG.itemColors[AppState.string.length % CONFIG.itemColors.length], "Tubing hanger", "3.5")); 
+                } 
+                else if (type === 'packer') { 
+                    let prevBtm = AppState.packer.length > 0 ? parseFloat(AppState.packer[AppState.packer.length - 1].btm) : NaN;
+                    top = !isNaN(prevBtm) ? prevBtm : 900;
+                    AppState.packer.push(TableManager.createToolObj(sl, top, top + 10, CONFIG.itemColors[(AppState.packer.length + 4) % CONFIG.itemColors.length], AppState.packer.length === 0 ? "Permanent Packer" : "Pup joint", "6.0")); 
+                } 
+                else if (type === 'bps') { 
+                    top = AppState.bps.length > 0 ? (AppState.bps[AppState.bps.length - 1].btm || 0) : 950;
+                    AppState.bps.push({ sl, type: 'Bridge Plug', otherValue:'', size: '7', top, btm: top + 4, color: '#475569', vScale: 1, vOrigin: 'center_s' }); 
+                }
+                else if (type === 'perf') AppState.perfs.push({ top: '', btm: '' });
+                else if (type === 'litho') AppState.lithos.push({ top: '', btm: '', name: '' });
+                else if (type === 'enlarge') AppState.enlargeRules.push({ from: '', to: '', scale: '2' });
+                else if (type === 'compress') AppState.compressRules.push({ from: '', to: '', scale: '0.5' });
+                
+                TableManager.renderInputTables(); TableManager.syncData();
+            },
+
+            createToolObj: (sl, top, btm, color, ddValue, od) => ({ sl, color, ddValue, otherValue: "", desc: "", top, btm, od, id: '2.9', vScale: 1, vOrigin: 'center_s' }),
+            deleteRow: (type, idx) => { AppState[type].splice(idx, 1); TableManager.renderInputTables(); TableManager.syncData(); },
+
+            renderInputTables: () => {
+                const getOptions = (arr, sel) => arr.map(op => `<option value="${esc(op)}" ${op === sel ? 'selected' : ''}>${op}</option>`).join('');
+                
+                $('casing-tbody').innerHTML = AppState.casings.map((it, i) => `<tr>
+                    <td><select class="type-sel" onchange="UIHelper.handleDropdownChange(this)">${getOptions(CONFIG.casingTypeOptions, it.type)}</select><input type="text" class="name-other" placeholder="Custom..." value="${esc(it.otherValue)}" style="display:${it.type==='Other'?'block':'none'}; margin-top:4px;" oninput="TableManager.syncData()"></td>
+                    <td><input type="number" step="any" class="depth-val" value="${esc(it.depth)}" placeholder="Depth..." oninput="UIHelper.limit5(this); TableManager.syncData()"></td>
+                    <td><input type="text" value="${esc(it.wt)}" placeholder="Wt..." oninput="TableManager.syncData()"></td>
+                    <td><input type="text" value="${esc(it.gr)}" list="apiGrades" placeholder="Gr..." oninput="TableManager.syncData()"></td>
+                    <td><input type="text" value="${esc(it.th)}" list="apiThreads" placeholder="Th..." oninput="TableManager.syncData()"></td>
+                    <td><button class="btn-danger btn-xs" onclick="TableManager.deleteRow('casings', ${i})">X</button></td>
+                </tr>`).join('');
+
+                $('liner-tbody').innerHTML = AppState.liners.map((it, i) => `<tr>
+                    <td><select class="type-sel" onchange="UIHelper.handleDropdownChange(this)">${getOptions(CONFIG.linerTypeOptions, it.size)}</select><input type="text" class="name-other" placeholder="Custom..." value="${esc(it.otherValue)}" style="display:${it.size==='Other'?'block':'none'}; margin-top:4px;" oninput="TableManager.syncData()"></td>
+                    <td><input type="number" step="any" class="top-inp" value="${esc(it.top)}" placeholder="Top..." oninput="UIHelper.limit5(this); TableManager.syncData()"></td>
+                    <td><input type="number" step="any" class="btm-inp" value="${esc(it.btm)}" placeholder="Btm..." oninput="UIHelper.limit5(this); TableManager.syncData()"></td>
+                    <td><input type="text" value="${esc(it.wt)}" placeholder="Wt..." oninput="TableManager.syncData()"></td>
+                    <td><input type="text" value="${esc(it.gr)}" list="apiGrades" placeholder="Gr..." oninput="TableManager.syncData()"></td>
+                    <td><input type="text" value="${esc(it.th)}" list="apiThreads" placeholder="Th..." oninput="TableManager.syncData()"></td>
+                    <td><button class="btn-danger btn-xs" onclick="TableManager.deleteRow('liners', ${i})">X</button></td>
+                </tr>`).join('');
+
+                $('tubing-tbody').innerHTML = AppState.tubing.map((it, i) => `<tr><td><input type="text" value="${esc(it.size)}" oninput="TableManager.syncData()"></td><td><input type="text" value="${esc(it.wt)}" oninput="TableManager.syncData()"></td><td><input type="text" value="${esc(it.gr)}" list="apiGrades" oninput="TableManager.syncData()"></td><td><input type="text" value="${esc(it.th)}" list="apiThreads" oninput="TableManager.syncData()"></td><td><input type="number" step="any" class="depth-val" value="${esc(it.depth)}" oninput="UIHelper.limit5(this); TableManager.syncData()" placeholder="Depth.."></td><td><input type="text" value="${esc(it.coupOd)}" oninput="TableManager.syncData()"></td><td><input type="text" value="${esc(it.coupLen)}" oninput="TableManager.syncData()"></td><td><button class="btn-danger btn-xs" onclick="TableManager.deleteRow('tubing', ${i})">X</button></td></tr>`).join('');
+                $('perf-tbody').innerHTML = AppState.perfs.map((it, i) => `<tr><td><input type="number" step="any" class="top-inp" value="${esc(it.top)}" oninput="UIHelper.limit5(this); TableManager.syncData()"></td><td><input type="number" step="any" class="btm-inp" value="${esc(it.btm)}" oninput="UIHelper.limit5(this); TableManager.syncData()"></td><td><button class="btn-danger btn-xs" onclick="TableManager.deleteRow('perfs', ${i})">X</button></td></tr>`).join('');
+                $('litho-tbody').innerHTML = AppState.lithos.map((it, i) => `<tr><td><input type="number" step="any" class="top-inp" value="${esc(it.top)}" oninput="UIHelper.limit5(this); TableManager.syncData()"></td><td><input type="number" step="any" class="btm-inp" value="${esc(it.btm)}" oninput="UIHelper.limit5(this); TableManager.syncData()"></td><td><input type="text" value="${esc(it.name)}" placeholder="e.g. Sandstone" oninput="TableManager.syncData()"></td><td><button class="btn-danger btn-xs" onclick="TableManager.deleteRow('lithos', ${i})">X</button></td></tr>`).join('');
+                
+                $('enlarge-tbody').innerHTML = AppState.enlargeRules.map((it, i) => `<tr><td><input type="number" step="any" class="top-inp" value="${esc(it.from)}" oninput="UIHelper.limit5(this); TableManager.syncData()"></td><td><input type="number" step="any" class="btm-inp" value="${esc(it.to)}" oninput="UIHelper.limit5(this); TableManager.syncData()"></td><td><input type="number" step="any" min="0.1" max="1000" value="${esc(it.scale)}" oninput="TableManager.syncData()"></td><td><button class="btn-danger btn-xs" onclick="TableManager.deleteRow('enlargeRules', ${i})">X</button></td></tr>`).join('');
+                $('compress-tbody').innerHTML = AppState.compressRules.map((it, i) => `<tr><td><input type="number" step="any" class="top-inp" value="${esc(it.from)}" oninput="UIHelper.limit5(this); TableManager.syncData()"></td><td><input type="number" step="any" class="btm-inp" value="${esc(it.to)}" oninput="UIHelper.limit5(this); TableManager.syncData()"></td><td><input type="number" step="any" min="0.001" max="1000" value="${esc(it.scale)}" oninput="TableManager.syncData()"></td><td><button class="btn-danger btn-xs" onclick="TableManager.deleteRow('compressRules', ${i})">X</button></td></tr>`).join('');
+
+                const buildToolRowHTML = (it, i, type, optionsArr) => {
+                    return `
+                    <tr>
+                        <td><input type="number" class="sl-inp" value="${esc(it.sl)}" oninput="TableManager.syncData()"></td>
+                        <td><input type="color" value="${esc(it.color)}" onchange="TableManager.syncData()"></td>
+                        <td><select class="name-sel" onchange="UIHelper.handleDropdownChange(this)">${getOptions(optionsArr, it.ddValue)}</select><input type="text" class="name-other" placeholder="Type name..." value="${esc(it.otherValue)}" style="display:${it.ddValue==='Other'?'block':'none'}; margin-top:4px;" oninput="TableManager.syncData()"></td>
+                        <td><input type="text" class="desc-inp" value="${esc(it.desc)}" oninput="TableManager.syncData()"></td>
+                        <td><input type="number" step="any" class="top-inp" value="${esc(it.top)}" oninput="UIHelper.limit5(this); TableManager.syncData()"></td>
+                        <td><input type="number" step="any" class="btm-inp" value="${esc(it.btm)}" oninput="UIHelper.limit5(this); TableManager.syncData()"></td>
+                        <td><input type="text" class="od-inp" value="${esc(it.od)}" oninput="TableManager.syncData()"></td>
+                        <td><input type="text" class="id-inp" value="${esc(it.id)}" oninput="TableManager.syncData()"></td>
+                        <td><button class="btn-danger btn-xs" onclick="TableManager.deleteRow('${type}', ${i})">X</button></td>
+                    </tr>
+                `};
+
+                $('input-items-tbody').innerHTML = AppState.string.map((it, i) => buildToolRowHTML(it, i, 'string', CONFIG.stringOpOptions)).join('');
+                $('packer-items-tbody').innerHTML = AppState.packer.map((it, i) => buildToolRowHTML(it, i, 'packer', CONFIG.tailPipeOptions)).join('');
+                
+                $('bp-table').style.display = AppState.bps.length === 0 ? 'none' : 'table';
+                $('bp-tbody').innerHTML = AppState.bps.map((bp, i) => `<tr>
+                    <td><input type="number" class="sl-inp" value="${esc(bp.sl)}" oninput="TableManager.syncData()"></td>
+                    <td><select class="plug-type-sel" onchange="UIHelper.handleDropdownChange(this)">${getOptions(['Bridge Plug', 'Cement Plug', 'Other'], bp.type)}</select><input type="text" class="name-other" placeholder="Name..." value="${esc(bp.otherValue)}" style="display:${bp.type==='Other'?'block':'none'}; margin-top:4px;" oninput="TableManager.syncData()"></td>
+                    <td><input type="text" value="${esc(bp.size)}" placeholder="e.g 7" oninput="TableManager.syncData()"></td>
+                    <td><input type="number" step="any" class="top-inp" value="${esc(bp.top)}" oninput="UIHelper.limit5(this); TableManager.syncData()"></td>
+                    <td><input type="number" step="any" class="btm-inp" value="${esc(bp.btm)}" oninput="UIHelper.limit5(this); TableManager.syncData()"></td>
+                    <td><input type="color" value="${esc(bp.color)}" onchange="TableManager.syncData()"></td>
+                    <td><button class="btn-danger btn-xs" onclick="TableManager.deleteRow('bps', ${i})">X</button></td>
+                </tr>`).join('');
+            },
+
+            syncData: () => {
+                AppState.casings = Array.from(document.querySelectorAll('#casing-tbody tr')).map(tr => {
+                    const inps = tr.querySelectorAll('input');
+                    const sel = tr.querySelector('.type-sel').value;
+                    return { type: sel, otherValue: inps[0].value, depth: inps[1].value, wt: inps[2].value, gr: inps[3].value, th: inps[4].value };
+                });
+                AppState.liners = Array.from(document.querySelectorAll('#liner-tbody tr')).map(tr => {
+                    const inps = tr.querySelectorAll('input');
+                    const sel = tr.querySelector('.type-sel').value;
+                    return { size: sel, otherValue: inps[0].value, top: inps[1].value, btm: inps[2].value, wt: inps[3].value, gr: inps[4].value, th: inps[5].value };
+                });
+                AppState.tubing = Array.from(document.querySelectorAll('#tubing-tbody tr')).map(tr => {
+                    const inps = tr.querySelectorAll('input'); return { size: inps[0].value, wt: inps[1].value, gr: inps[2].value, th: inps[3].value, depth: inps[4].value, coupOd: inps[5].value, coupLen: inps[6].value };
+                });
+                AppState.perfs = Array.from(document.querySelectorAll('#perf-tbody tr')).map(tr => {
+                    const inps = tr.querySelectorAll('input'); return { top: inps[0].value, btm: inps[1].value };
+                });
+                AppState.lithos = Array.from(document.querySelectorAll('#litho-tbody tr')).map(tr => {
+                    const inps = tr.querySelectorAll('input'); return { top: inps[0].value, btm: inps[1].value, name: inps[2].value };
+                });
+                AppState.enlargeRules = Array.from(document.querySelectorAll('#enlarge-tbody tr')).map(tr => {
+                    const inps = tr.querySelectorAll('input'); return { from: parseFloat(inps[0].value)||0, to: parseFloat(inps[1].value)||0, scale: parseFloat(inps[2].value)||1 };
+                });
+                AppState.compressRules = Array.from(document.querySelectorAll('#compress-tbody tr')).map(tr => {
+                    const inps = tr.querySelectorAll('input'); return { from: parseFloat(inps[0].value)||0, to: parseFloat(inps[1].value)||0, scale: parseFloat(inps[2].value)||1 };
+                });
+                AppState.bps = Array.from(document.querySelectorAll('#bp-tbody tr')).map(tr => {
+                    const textInps = tr.querySelectorAll('input[type="text"], input[type="color"]');
+                    const top = parseFloat(tr.querySelector('.top-inp').value); const btm = parseFloat(tr.querySelector('.btm-inp').value);
+                    return { sl: parseFloat(tr.querySelector('.sl-inp').value)||0, type: tr.querySelector('.plug-type-sel').value, otherValue: tr.querySelector('.name-other').value, size: textInps[1].value, top: isNaN(top)?'':top, btm: isNaN(btm)?'':btm, color: textInps[2].value, vScale: 1, vOrigin: 'center_s' };
+                });
+
+                const extractTool = (tr) => {
+                    const top = parseFloat(tr.querySelector('.top-inp').value); const btm = parseFloat(tr.querySelector('.btm-inp').value);
+                    return { sl: parseFloat(tr.querySelector('.sl-inp').value)||0, color: tr.querySelector('input[type="color"]').value, ddValue: tr.querySelector('.name-sel').value, otherValue: tr.querySelector('.name-other').value, desc: tr.querySelector('.desc-inp').value, top: isNaN(top)?'':top, btm: isNaN(btm)?'':btm, od: tr.querySelector('.od-inp').value, id: tr.querySelector('.id-inp').value, vScale: 1, vOrigin: 'center_s' };
+                };
+                AppState.string = Array.from(document.querySelectorAll('#input-items-tbody tr')).map(extractTool);
+                AppState.packer = Array.from(document.querySelectorAll('#packer-items-tbody tr')).map(extractTool);
+
+                const enforceContinuity = (arr, tbodyId) => {
+                    const rows = document.querySelectorAll(`#${tbodyId} tr`);
+                    for (let i = 1; i < arr.length; i++) {
+                        let prevBtm = parseFloat(arr[i-1].btm);
+                        if (!isNaN(prevBtm)) { arr[i].top = prevBtm; if (rows[i] && rows[i].querySelector('.top-inp')) rows[i].querySelector('.top-inp').value = prevBtm; }
+                    }
+                };
+                enforceContinuity(AppState.string, 'input-items-tbody');
+                enforceContinuity(AppState.packer, 'packer-items-tbody');
+                
+                Validator.check();
+                TableManager.updateLabelsList(); 
+                AppController.render();
+            },
+
+            updateLabelsList: () => {
+                const container = $('indicator-list'); container.innerHTML = '';
+                AppState.allTools.forEach(el => {
+                    let nm = (el.ddValue || el.type) === 'Other' ? el.otherValue : (el.ddValue || el.type);
+                    if (!AppState.labels.hasOwnProperty(el.sl)) AppState.labels[el.sl] = true;
+                    container.innerHTML += `
+                        <label style="display:flex; align-items:center; gap:8px; font-size:11px; text-transform:none; font-weight:600; cursor:pointer; padding: 4px; border-radius: 4px; transition: background 0.2s;">
+                            <input type="checkbox" onchange="AppState.labels[${el.sl}]=this.checked; AppController.render();" ${AppState.labels[el.sl] ? 'checked' : ''} style="width:14px; height:14px; margin:0; cursor:pointer;">
+                            <span style="display:inline-block; width:14px; height:14px; background:${el.color}; border:1px solid rgba(0,0,0,0.2); border-radius:3px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"></span>
+                            [Sl.${el.sl}] ${nm}
+                        </label>
+                    `;
+                });
+            }
+        };
+
+        const ExternalOverlay = {
+            handleUpload: (input) => {
+                if (input.files && input.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = e => { AppState.externalOverlayDataUrl = e.target.result; AppController.render(); }
+                    reader.readAsDataURL(input.files[0]);
+                }
+            },
+            clear: () => { AppState.externalOverlayDataUrl = null; $('externalDiagramInput').value = ''; AppController.render(); },
+            resetTransform: () => { const overlay = document.querySelector('.ext-overlay-image'); if (overlay) overlay.transform.baseVal.clear(); }
+        };
+
+        const OutputGenerator = {
+            updateTextFields: () => {
+                const textBindings = [
+                    ['fieldName', 'outFieldName'], ['wellNo', 'outWellNo'], ['custName', 'outCustName'], 
+                    ['rigName', 'outRigName'], ['rigFloor', 'outRigFloor'], ['targetTvd', 'outTVD'], 
+                    ['targetMd', 'outMD'], ['testChoke', 'outChoke'], 
+                    ['testFlowRate', 'outFlow'], ['testFlowPres', 'outFP'], ['testBhp', 'outBHP'],
+                    ['testBht', 'outBht'], ['testSip', 'outSip']
+                ];
+                textBindings.forEach(([inId, outId]) => $(outId).innerText = val(inId) || "---");
+                
+                $('lblDate').innerText = val('reportDate') ? new Date(val('reportDate')).toLocaleDateString('en-GB') : "---";
+                $('outSpud').innerText = val('spudDate') ? new Date(val('spudDate')).toLocaleDateString('en-GB') : "---";
+                $('outComp').innerText = val('compDate') ? new Date(val('compDate')).toLocaleDateString('en-GB') : "---";
+                
+                let unitLabel = UnitManager.isFeet ? 'ft' : 'm';
+                
+                if (val('wellType') === 'Vertical') {
+                    $('outTraj').innerText = "Vertical"; $('outKop').innerText = "N/A";
+                } else {
+                    $('outTraj').innerText = `Deviated @ ${val('inclination')||"0"}° (Az: ${val('azimuth')||"0"}°)`;
+                    $('outKop').innerText = (val('kopDepth') || "0") + " " + unitLabel;
+                }
+            },
+
+            updateOutputTables: () => {
+                $('wrap-gen').style.display = $('shwGen').checked ? 'block' : 'none';
+                $('wrap-csg').style.display = $('shwCsg').checked ? 'block' : 'none';
+                $('wrap-tub').style.display = $('shwTub').checked ? 'block' : 'none';
+                $('out-litho-section').style.display = $('shwLit').checked ? 'block' : 'none';
+                $('out-test-section').style.display = $('shwTst').checked && $('showTest').checked ? 'block' : 'none';
+                $('wrap-str').style.display = $('shwStr').checked ? 'block' : 'none';
+                $('wrap-pac').style.display = $('shwPac').checked ? 'block' : 'none';
+
+                let unitLabel = UnitManager.isFeet ? 'ft' : 'm';
+
+                document.querySelectorAll('.dyn-row').forEach(e => e.remove());
+                const genTable = $('out-general-table');
+                let rowCount = 0; let tr = null;
+                DynamicFields.f1.forEach(f => {
+                    if(f.label || f.value) {
+                        if(rowCount % 2 === 0) { tr = document.createElement('tr'); tr.className = 'dyn-row'; genTable.appendChild(tr); }
+                        tr.innerHTML += `<th>${esc(f.label)}</th><td>${esc(f.value)}</td>`; rowCount++;
+                    }
+                });
+                if(rowCount % 2 !== 0 && tr) tr.innerHTML += `<th></th><td></td>`;
+
+                const csgTb = $('out-casing-tbody'); csgTb.innerHTML = '';
+                const addCsg = (ty, d, w, g, t) => { if(d||w||t) csgTb.innerHTML += `<tr><td><b>${ty}</b></td><td>${d||'-'}</td><td>${w||'-'}</td><td>${g||'-'}</td><td>${t||'-'}</td></tr>`; };
+                
+                AppState.casings.forEach(c => {
+                    let nm = c.type === 'Other' ? c.otherValue : c.type;
+                    addCsg(nm, c.depth, c.wt, c.gr, c.th);
+                });
+                AppState.liners.forEach(l => {
+                    let nm = l.size === 'Other' ? l.otherValue : l.size;
+                    addCsg(`Liner (${nm})`, `${l.top||'-'} - ${l.btm||'-'}`, l.wt, l.gr, l.th);
+                });
+
+                $('out-tubing-tbody').innerHTML = AppState.tubing.map(it => `<tr><td>${it.size||'-'}</td><td>${it.depth||'-'}</td><td>${it.wt||'-'}</td><td>${it.gr||'-'}</td><td>${it.th||'-'}</td><td>${it.coupOd||'-'}</td><td>${it.coupLen||'-'}</td></tr>`).join('');
+                let perfsHtml = AppState.perfs.filter(p => p.top || p.btm).map((p, i) => `Zone ${i+1}: ${p.top||'-'} - ${p.btm||'-'} ${unitLabel}`).join('<br>');
+                $('outPerf').innerHTML = perfsHtml || '---';
+                let lithosHtml = AppState.lithos.filter(l => l.top || l.btm).map(l => `${l.top||'-'} - ${l.btm||'-'} ${unitLabel} (${l.name})`).join('<br>');
+                $('outLitho').innerHTML = lithosHtml || '---';
+
+                const getValidVals = (arr, key) => arr.map(i => parseFloat(i[key])).filter(v => !isNaN(v));
+                let sOds = getValidVals(AppState.string, 'od'), maxSOd = sOds.length ? Math.max(...sOds) : -1;
+                let sIds = getValidVals(AppState.string, 'id'), minSId = sIds.length ? Math.min(...sIds) : -1;
+                let pOds = getValidVals(AppState.packer, 'od'), maxPOd = pOds.length ? Math.max(...pOds) : -1;
+                let pIds = getValidVals(AppState.packer, 'id'), minPId = pIds.length ? Math.min(...pIds) : -1;
+
+                const buildToolRow = (it, isString) => {
+                    let nm = it.ddValue === 'Other' ? it.otherValue : (it.ddValue || it.type);
+                    let cOd = parseFloat(it.od), cId = parseFloat(it.id);
+                    let maxOd = isString ? maxSOd : maxPOd;
+                    let minId = isString ? minSId : minPId;
+                    
+                    let odStyle = (!isNaN(cOd) && cOd === maxOd) ? 'background:#fee2e2; color:red; font-weight:bold; border: 1px solid red;' : '';
+                    let idStyle = (!isNaN(cId) && cId === minId) ? 'background:#fee2e2; color:red; font-weight:bold; border: 1px solid red;' : '';
+
+                    return `<tr><td style="text-align:center;">${it.sl||'-'}</td><td style="background:${it.color}; width:12px; border: 1px solid #cbd5e1;"></td><td><b>${nm}</b></td><td>${it.desc||'-'}</td><td>${it.top}</td><td>${it.btm}</td><td>${Number(Math.max(0, it.btm-it.top).toFixed(2))}</td><td style="${odStyle}">${it.od}</td><td style="${idStyle}">${it.id}</td></tr>`;
+                };
+
+                $('out-tools-tbody').innerHTML = AppState.string.map(it => buildToolRow(it, true)).join('');
+                $('out-packer-tbody').innerHTML = AppState.packer.map(it => buildToolRow(it, false)).join('');
+            },
+
+            drawSVG: () => {
+                const svg = $('schematic-svg');
+                let defsHtml = svg.querySelector('defs').outerHTML; 
+                let externalLayer = svg.querySelector('#external-diagram-layer');
+                let externalHtml = externalLayer ? externalLayer.outerHTML : '<g id="external-diagram-layer"></g>';
+                svg.innerHTML = '';
+                
+                let globalWidthScale = parseFloat(val('globalWidthScale')) || 1.0;
+                let widthMult = (parseFloat(val('boreWidth')) || 1.0) * globalWidthScale;
+                
+                let sKop = parseFloat(val('scaleKop')) || 1.0;
+                let sInc = parseFloat(val('scaleInc')) || 1.0;
+
+                let allCasings = AppState.casings.map(c => {
+                    let typeStr = c.type === 'Other' ? c.otherValue : c.type;
+                    let m = typeStr ? typeStr.match(/[\d\.]+/) : null;
+                    let w = 7;
+                    if (typeStr.includes('13-3/8')) w = 13.375;
+                    else if (typeStr.includes('9-5/8')) w = 9.625;
+                    else if (m) w = parseFloat(m[0]);
+                    return { d: parseFloat(c.depth)||0, w: w };
+                }).filter(c => c.d > 0).sort((a,b) => b.w - a.w);
+
+                let allLiners = AppState.liners.map(l => {
+                    let typeStr = l.size === 'Other' ? l.otherValue : l.size;
+                    let m = typeStr ? typeStr.match(/[\d\.]+/) : null;
+                    let w = 5;
+                    if (typeStr.includes('7')) w = 7;
+                    else if (m) w = parseFloat(m[0]);
+                    return { t: parseFloat(l.top)||0, b: parseFloat(l.btm)||0, w: w };
+                }).filter(l => l.b > l.t);
+
+                let vShoe = numVal('shoeDepth');
+                let maxCsg = allCasings.length > 0 ? Math.max(...allCasings.map(c=>c.d)) : 0;
+                let maxLiner = allLiners.length > 0 ? Math.max(...allLiners.map(l=>l.b)) : 0;
+                let maxDepth = Math.max(100, maxCsg, maxLiner, vShoe, ...AppState.allTools.map(t => Math.max(t.top, t.btm)));
+
+                let rules = [...AppState.enlargeRules, ...AppState.compressRules];
+                const getVisualDepth = (d) => {
+                    let boundaries = [0, d];
+                    rules.forEach(r => { if(r.from >= 0 && r.from < d) boundaries.push(r.from); if(r.to >= 0 && r.to < d) boundaries.push(r.to); });
+                    boundaries.sort((a,b) => a-b); let uniq = [...new Set(boundaries)]; let vd = 0;
+                    for(let i=0; i<uniq.length-1; i++) {
+                        let st = uniq[i], en = uniq[i+1]; let mid = (st+en)/2; let scale = 1.0;
+                        for(let r of rules) { if(mid > r.from && mid < r.to) scale = r.scale; }
+                        vd += (en - st) * scale;
+                    }
+                    return vd;
+                };
+
+                const ctx = {
+                    kop: numVal('kopDepth') * sKop, inc: (numVal('inclination') * sInc) / 5, 
+                    isDev: val('wellType') === 'Deviated', sPx: CONFIG.scalePxPerInch * widthMult,
+                    bgTheme: val('bgTheme') || 'none', casingStyle: val('casingRenderStyle') || 'standard',
+                    casingGeom: val('casingGeometry') || 'standard', toolStyle: val('toolShapeStyle') || 'standard',
+                    maxDepth: maxDepth
+                };
+
+                let maxVisualDepth = getVisualDepth(maxDepth);
+                let scaleY = (CONFIG.svgConfig.maxH - CONFIG.svgConfig.startY - 30) / (maxVisualDepth || 1);
+                
+                let scaleX = scaleY * globalWidthScale; 
+                
+                if (ctx.isDev && maxDepth > ctx.kop) {
+                    const maxHD = (maxVisualDepth - getVisualDepth(ctx.kop)) * Math.sin((ctx.inc * Math.PI) / 180);
+                    if (maxHD * scaleY > (CONFIG.svgConfig.canvasW - CONFIG.svgConfig.centerX - 25)) scaleX = ((CONFIG.svgConfig.canvasW - CONFIG.svgConfig.centerX - 25) / maxHD) * globalWidthScale;
+                }
+                
+                ctx.getXY = (trueDepth, offsetX = 0) => {
+                    let vDepth = getVisualDepth(trueDepth);
+                    let x = CONFIG.svgConfig.centerX, y = CONFIG.svgConfig.startY + (vDepth * scaleY);
+                    if (ctx.isDev && trueDepth >= ctx.kop) {
+                        let mappedKop = getVisualDepth(ctx.kop); const rad = (ctx.inc * Math.PI) / 180; const dDev = vDepth - mappedKop;
+                        x = CONFIG.svgConfig.centerX + (dDev * Math.sin(rad)) * scaleX + offsetX * Math.cos(rad);
+                        y = CONFIG.svgConfig.startY + (mappedKop * scaleY) + (dDev * Math.cos(rad)) * scaleY - offsetX * Math.sin(rad);
+                    } else x += offsetX;
+                    return { x, y };
+                };
+
+                let bgHtml = '';
+                if(ctx.bgTheme === 'grid_light') bgHtml = `<pattern id="gridbg" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e2e8f0" stroke-width="1"/></pattern><rect width="100%" height="100%" fill="url(#gridbg)"/>`;
+                else if(ctx.bgTheme === 'light_blue') bgHtml = `<rect width="100%" height="100%" fill="#f0f9ff"/>`;
+                else if(ctx.bgTheme === 'light_green') bgHtml = `<rect width="100%" height="100%" fill="#f0fdf4"/>`;
+                else if(ctx.bgTheme === 'light_yellow') bgHtml = `<rect width="100%" height="100%" fill="#fefce8"/>`;
+                
+                svg.innerHTML = defsHtml + bgHtml;
+
+                SVGEngine.drawGridsAndRT(svg, ctx);
+                SVGEngine.drawCasings(svg, ctx, allCasings, allLiners, vShoe);
+                SVGEngine.drawPerforations(svg, ctx, allCasings, allLiners);
+                SVGEngine.drawTools(svg, ctx, allCasings, allLiners);
+
+                svg.innerHTML += externalHtml;
+                if (AppState.externalOverlayDataUrl) {
+                    const layer = svg.querySelector('#external-diagram-layer');
+                    if (!layer.querySelector('.ext-overlay-image')) { layer.innerHTML = `<image href="${AppState.externalOverlayDataUrl}" x="100" y="200" width="180" height="180" class="interactive-item ext-overlay-image" preserveAspectRatio="xMidYMid meet" />`; }
+                } else { const layer = svg.querySelector('#external-diagram-layer'); if(layer) layer.innerHTML = ''; }
+            }
+        };
+
+        const SVGEngine = {
+            drawGridsAndRT: (svg, ctx) => {
+                let gridColor = '#cbd5e1'; 
+                let rtColor = 'var(--danger)';
+                svg.innerHTML += `<g><line x1="0" y1="${CONFIG.svgConfig.startY}" x2="100%" y2="${CONFIG.svgConfig.startY}" stroke="${rtColor}" stroke-width="1.5" stroke-dasharray="4,4"/><text x="12" y="${CONFIG.svgConfig.startY - 6}" font-size="11px" font-weight="bold" fill="${rtColor}">RT Reference</text></g>`;
+                
+                let step = UnitManager.isFeet ? 1000 : 250;
+                if(ctx.maxDepth > (UnitManager.isFeet ? 6000 : 2000)) step = UnitManager.isFeet ? 2000 : 500;
+                
+                for(let d=0; d<=ctx.maxDepth; d+=step) {
+                    if(d===0) continue; let pt = ctx.getXY(d);
+                    svg.innerHTML += `<line x1="${pt.x-130}" y1="${pt.y}" x2="${pt.x+130}" y2="${pt.y}" stroke="${gridColor}" stroke-dasharray="4,4"/>`;
+                }
+            },
+
+            drawPipeCore: (svg, ctx, st, en, w, isCement, bc, isLiner = false) => {
+                if(en<=0 || st>=en) return;
+                let bW_L = w/2, bW_R = w/2; let cg = ctx.casingGeom;
+                
+                let tL = ctx.getXY(st, -w/2), tR = ctx.getXY(st, w/2), bL = ctx.getXY(en, -bW_L), bR = ctx.getXY(en, bW_R), kL = ctx.getXY(ctx.kop, -w/2), kR = ctx.getXY(ctx.kop, w/2);
+                let pStr = (ctx.isDev && st < ctx.kop && en > ctx.kop) ? `M ${tL.x} ${tL.y} L ${kL.x} ${kL.y} L ${bL.x} ${bL.y} L ${bR.x} ${bR.y} L ${kR.x} ${kR.y} L ${tR.x} ${tR.y} Z` : `M ${tL.x} ${tL.y} L ${bL.x} ${bL.y} L ${bR.x} ${bR.y} L ${tR.x} ${tR.y} Z`;
+                
+                if (!isCement) {
+                    if (cg === '2d_flush_joint') {
+                        pStr = `M ${tL.x} ${tL.y} L ${bL.x} ${bL.y} L ${bR.x} ${bR.y} L ${tR.x} ${tR.y} Z`;
+                    } else if (cg === '2d_buttress_collar') {
+                        let mY = st+20; let nt = ctx.getXY(mY-10, -w/2), nb = ctx.getXY(mY+10, -w/2), ntIn = ctx.getXY(mY-10, -(w/2)*1.2), nbIn = ctx.getXY(mY+10, -(w/2)*1.2);
+                        let rnt = ctx.getXY(mY-10, w/2), rnb = ctx.getXY(mY+10, w/2), rntIn = ctx.getXY(mY-10, (w/2)*1.2), rnbIn = ctx.getXY(mY+10, (w/2)*1.2);
+                        pStr = `M ${tL.x} ${tL.y} L ${nt.x} ${nt.y} L ${ntIn.x} ${ntIn.y} L ${nbIn.x} ${nbIn.y} L ${nb.x} ${nb.y} L ${bL.x} ${bL.y} L ${bR.x} ${bR.y} L ${rnb.x} ${rnb.y} L ${rnbIn.x} ${rnbIn.y} L ${rntIn.x} ${rntIn.y} L ${rnt.x} ${rnt.y} L ${tR.x} ${tR.y} Z`;
+                    }
+                }
+                
+                let chunkHtml = "";
+                if (isCement) { chunkHtml = `<path d="${pStr}" fill="url(#cement)" stroke="#94a3b8" stroke-width="0.5"/>`; } 
+                else {
+                    let lineStr = (ctx.isDev && st < ctx.kop && en > ctx.kop) ? `M ${tL.x} ${tL.y} L ${kL.x} ${kL.y} L ${bL.x} ${bL.y} M ${tR.x} ${tR.y} L ${kR.x} ${kR.y} L ${bR.x} ${bR.y}` : `M ${tL.x} ${tL.y} L ${bL.x} ${bL.y} M ${tR.x} ${tR.y} L ${bR.x} ${bR.y}`;
+                    
+                    let fillStyle = "#ffffff"; let strokeStyle = bc; let strokeWidthInner = "2"; let dashArray = ""; let extraFilter = "";
+                    let lineStrOuterW = "3"; let opacityModifier = "";
+
+                    let cs = ctx.casingStyle;
+                    if (cs === 'premium_steel') { fillStyle = 'url(#grad-premium-steel)'; strokeStyle = '#0f172a'; lineStrOuterW="1"; } 
+                    else if (cs === 'glass') { fillStyle = 'url(#grad-glass)'; strokeStyle = '#0284c7'; }
+                    else if (cs === 'chrome_polished') { fillStyle = 'url(#chrome-shine)'; strokeStyle = '#1e293b'; }
+                    else if (cs === '2d_flat_color') { fillStyle = '#f1f5f9'; strokeStyle = '#1e293b'; strokeWidthInner="1.5"; }
+                    else if (cs === '2d_outline_black') { fillStyle = '#ffffff'; strokeStyle = '#000000'; lineStrOuterW="4"; }
+                    else if (cs === '2d_api_stroke') { fillStyle = 'transparent'; strokeStyle = '#334155'; strokeWidthInner="1"; lineStrOuterW="2"; }
+                    else if (cs === '2d_tech_ink') { fillStyle = '#e2e8f0'; strokeStyle = '#0f172a'; }
+                    else if (cs === '2d_matte_finish') { fillStyle = '#e0e7ff'; strokeStyle = '#312e81'; }
+
+                    if(cg === '2d_perforated_base') { dashArray = 'stroke-dasharray="4,4"'; }
+
+                    chunkHtml = `<path d="${pStr}" fill="${fillStyle}" stroke="${strokeStyle}" stroke-width="${strokeWidthInner}" ${extraFilter} ${opacityModifier}/><path d="${lineStr}" fill="none" stroke="${strokeStyle}" stroke-width="${lineStrOuterW}" ${dashArray} ${extraFilter} ${opacityModifier}/>`;
+                }
+                svg.innerHTML += `<g class="interactive-item">${chunkHtml}</g>`;
+            },
+
+            drawCasings: (svg, ctx, allCasings, allLiners, vShoe) => {
+                allCasings.forEach(c => {
+                    SVGEngine.drawPipeCore(svg, ctx, 0, c.d, (c.w * ctx.sPx) + 14, true);
+                });
+                allLiners.forEach(l => {
+                    SVGEngine.drawPipeCore(svg, ctx, l.t, l.b, (l.w * ctx.sPx) + 14, true, null, true);
+                });
+
+                let colors = ["#64748b", "#475569", "#334155", "#1e293b", "#0f172a"];
+                allCasings.forEach((c, i) => {
+                    let color = colors[Math.min(i, colors.length-1)];
+                    SVGEngine.drawPipeCore(svg, ctx, 0, c.d, c.w * ctx.sPx, false, color);
+                });
+                allLiners.forEach(l => {
+                    SVGEngine.drawPipeCore(svg, ctx, l.t, l.b, l.w * ctx.sPx, false, "#0f172a", true);
+                    
+                    let pW = (allCasings.length > 0 ? allCasings[allCasings.length-1].w : 9.625) * ctx.sPx * 0.9;
+                    let lW = l.w * ctx.sPx;
+                    let lT = l.t - 12;
+                    let lTL = ctx.getXY(lT, -pW/2), lTR = ctx.getXY(lT, pW/2);
+                    let lBL = ctx.getXY(l.t, -lW/2), lBR = ctx.getXY(l.t, lW/2);
+                    svg.innerHTML += `<g class="interactive-item">
+                        <path d="M ${lTL.x} ${lTL.y} L ${lBL.x} ${lBL.y} L ${lBR.x} ${lBR.y} L ${lTR.x} ${lTR.y} Z" fill="#0f172a"/>
+                    </g>`;
+                });
+
+                if(vShoe > 0) {
+                    let pW = (allCasings.length > 0 ? allCasings[allCasings.length-1].w : 9.625) * ctx.sPx;
+                    let sT = vShoe - 8, sB = vShoe + 6;
+                    let sTL = ctx.getXY(sT, -pW/2), sTR = ctx.getXY(sT, pW/2);
+                    let sBL = ctx.getXY(sB, -pW/4), sBR = ctx.getXY(sB, pW/4);
+                    let sBC = ctx.getXY(sB+6, 0);
+                    
+                    let shoeStyle = val('casingShoeStyle') || 'standard';
+                    let shoePath = '';
+                    
+                    if (shoeStyle === 'rounded_nose') {
+                        shoePath = `M ${sTL.x} ${sTL.y} L ${sBL.x} ${sBL.y} Q ${sBC.x} ${sBC.y+8} ${sBR.x} ${sBR.y} L ${sTR.x} ${sTR.y} Z`;
+                    } else if (shoeStyle === 'flat_bottom') {
+                        sBL = ctx.getXY(sB, -pW/2); sBR = ctx.getXY(sB, pW/2);
+                        shoePath = `M ${sTL.x} ${sTL.y} L ${sBL.x} ${sBL.y} L ${sBR.x} ${sBR.y} L ${sTR.x} ${sTR.y} Z`;
+                    } else if (shoeStyle === 'stepped_shoe') {
+                        let m1L = ctx.getXY(sT+4, -pW/2), m1R = ctx.getXY(sT+4, pW/2);
+                        let m2L = ctx.getXY(sT+4, -pW/3), m2R = ctx.getXY(sT+4, pW/3);
+                        let bL = ctx.getXY(sB, -pW/3), bR = ctx.getXY(sB, pW/3);
+                        shoePath = `M ${sTL.x} ${sTL.y} L ${m1L.x} ${m1L.y} L ${m2L.x} ${m2L.y} L ${bL.x} ${bL.y} L ${bR.x} ${bR.y} L ${m2R.x} ${m2R.y} L ${m1R.x} ${m1R.y} L ${sTR.x} ${sTR.y} Z`;
+                    } else if (shoeStyle === 'sawtooth_shoe') {
+                        let p1 = ctx.getXY(sB, -pW/2), p2 = ctx.getXY(sB+4, -pW/4), p3 = ctx.getXY(sB, 0), p4 = ctx.getXY(sB+4, pW/4), p5 = ctx.getXY(sB, pW/2);
+                        shoePath = `M ${sTL.x} ${sTL.y} L ${p1.x} ${p1.y} L ${p2.x} ${p2.y} L ${p3.x} ${p3.y} L ${p4.x} ${p4.y} L ${p5.x} ${p5.y} L ${sTR.x} ${sTR.y} Z`;
+                    } else {
+                        shoePath = `M ${sTL.x} ${sTL.y} L ${sBL.x} ${sBL.y} L ${sBC.x} ${sBC.y} L ${sBR.x} ${sBR.y} L ${sTR.x} ${sTR.y} Z`;
+                    }
+
+                    svg.innerHTML += `<g class="interactive-item">
+                        <path d="${shoePath}" fill="#b45309" stroke="#1e293b" stroke-width="2"/>
+                    </g>`;
+                }
+            },
+
+            drawPerforations: (svg, ctx, allCasings, allLiners) => {
+                AppState.perfs.forEach(p => {
+                    let t = parseFloat(p.top), b = parseFloat(p.btm);
+                    if(t && b && t<b) {
+                        let pW = 9.625;
+                        for(let l of allLiners) { if (t >= l.t && t <= l.b) { pW = l.w; break; } }
+                        if (pW === 9.625) {
+                            for(let c of [...allCasings].reverse()) { if (t <= c.d) { pW = c.w; break; } }
+                        }
+                        let pR = pW * ctx.sPx / 2;
+
+                        let perfHtml = '<g class="interactive-item">';
+                        for(let i=1; i<=6; i++) {
+                            let d = t + ((b-t)/7 * i); 
+                            let leftC = ctx.getXY(d, -pR); 
+                            let rightC = ctx.getXY(d, pR);
+                            perfHtml += `<path d="M ${leftC.x} ${leftC.y - 0.75} L ${leftC.x - 18} ${leftC.y} L ${leftC.x} ${leftC.y + 0.75} Z" fill="#ef4444" stroke="none"/>`;
+                            perfHtml += `<path d="M ${rightC.x} ${rightC.y - 0.75} L ${rightC.x + 18} ${rightC.y} L ${rightC.x} ${rightC.y + 0.75} Z" fill="#ef4444" stroke="none"/>`;
+                        }
+                        svg.innerHTML += perfHtml + '</g>';
+                    }
+                });
+            },
+
+            drawTools: (svg, ctx, allCasings, allLiners) => {
+                let lblQueue = [];
+                let unitLabel = UnitManager.isFeet ? 'ft' : 'm';
+                
+                allLiners.forEach((l, idx) => {
+                    if (l.t > 0) {
+                        lblQueue.push({ sl: '-', name: `Liner ${idx+1} Top`, top: l.t, color: (ctx.bgTheme==='none'?"#0f172a":"#cbd5e1"), midY: ctx.getXY(l.t).y, anchorX: ctx.getXY(l.t).x - 12 });
+                    }
+                });
+
+                let ts = ctx.toolStyle;
+
+                AppState.allTools.forEach(it => {
+                    let nm = (it.ddValue || it.type) === 'Other' ? it.otherValue : (it.ddValue || it.type);
+                    let nmL = nm.toLowerCase();
+                    let cat = nmL.includes('packer')?'packer':nmL.includes('scsssv')?'scsssv':nmL.includes('ssd')?'ssd':nmL.includes('bridge plug')?'bridge_plug':nmL.includes('cement plug')?'cement_plug':'tool';
+                    
+                    let wid = (parseFloat(it.od || it.size) || (15/(ctx.sPx/(parseFloat(val('boreWidth'))||1)))) * ctx.sPx; 
+                    let rLen = (it.btm === it.top ? 2 : (it.btm - it.top)) * (parseFloat(it.vScale) || 1); 
+                    let rT = 0, rB = 0; let vOrig = it.vOrigin || 'center_s';
+                    if(vOrig.startsWith('top') || vOrig === 'top') { rT = it.top; rB = it.top + rLen; }
+                    else if(vOrig.startsWith('btm') || vOrig === 'bottom') { rB = it.btm; rT = it.btm - rLen; }
+                    else { let m = (it.top + it.btm)/2; rT = m - rLen/2; rB = m + rLen/2; }
+                    if (rT < 0) { rB += Math.abs(rT); rT = 0; }
+
+                    let tL=ctx.getXY(rT, -wid/2), tR=ctx.getXY(rT, wid/2), bL=ctx.getXY(rB, -wid/2), bR=ctx.getXY(rB, wid/2), kL=ctx.getXY(ctx.kop, -wid/2), kR=ctx.getXY(ctx.kop, wid/2);
+                    let pStr = (ctx.isDev && rT < ctx.kop && rB > ctx.kop) ? `M ${tL.x} ${tL.y} L ${kL.x} ${kL.y} L ${bL.x} ${bL.y} L ${bR.x} ${bR.y} L ${kR.x} ${kR.y} L ${tR.x} ${tR.y} Z` : `M ${tL.x} ${tL.y} L ${bL.x} ${bL.y} L ${bR.x} ${bR.y} L ${tR.x} ${tR.y} Z`;
+                    
+                    let mY = (rT+rB)/2; 
+
+                    let baseColor = it.color || "#0284c7";
+                    let fillStyle = baseColor, strokeStyle = "#0f172a", strokeW = "1", extraPath = "", extraFilter = "";
+
+                    if(ts === 'classic_beveled') { extraPath = `<path d="M ${ctx.getXY(rT+1,-wid/2+1).x} ${ctx.getXY(rT+1,-wid/2+1).y} L ${ctx.getXY(rB-1,-wid/2+1).x} ${ctx.getXY(rB-1,-wid/2+1).y} L ${ctx.getXY(rB-1,wid/2-1).x} ${ctx.getXY(rB-1,wid/2-1).y} L ${ctx.getXY(rT+1,wid/2-1).x} ${ctx.getXY(rT+1,wid/2-1).y} Z" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2"/>`; }
+                    else if(ts === 'ultra_pro_cyl') { fillStyle = 'url(#grad-premium-steel)'; strokeStyle = baseColor; strokeW = "2"; }
+                    else if(ts === '2d_metallic_solid') { fillStyle = 'url(#grad-metallic-solid)'; strokeStyle = '#475569'; strokeW = "1.5"; }
+                    else if(ts === '2d_metallic_brushed') { fillStyle = 'url(#grad-metallic-brushed)'; strokeStyle = '#334155'; strokeW = "1.5"; }
+                    else if(ts === '2d_metallic_industrial') { fillStyle = '#475569'; strokeStyle = '#0f172a'; strokeW = "2.5"; }
+                    else if(ts.includes('2d_')) { strokeW = "1.5"; strokeStyle = "#111827"; fillStyle = baseColor; }
+                    
+                    if(!ts.includes('2d_') && ts !== 'standard') { extraPath += `<path d="${pStr}" fill="url(#overlay-3d)"/>`; }
+
+                    let elHtml = `<g class="interactive-item"><path d="${pStr}" fill="${fillStyle}" stroke="${strokeStyle}" stroke-width="${strokeW}" ${extraFilter}/>${extraPath}`;
+
+                    let pid = parseFloat(it.id);
+                    if (pid > 0 && pid * ctx.sPx < wid) {
+                        let iw = pid * ctx.sPx; let idL=ctx.getXY(rT,-iw/2), idR=ctx.getXY(rT,iw/2), idBL=ctx.getXY(rB,-iw/2), idBR=ctx.getXY(rB,iw/2), idKL=ctx.getXY(ctx.kop,-iw/2), idKR=ctx.getXY(ctx.kop,iw/2);
+                        let idStr = (ctx.isDev && rT < ctx.kop && rB > ctx.kop) ? `M ${idL.x} ${idL.y} L ${idKL.x} ${idKL.y} L ${idBL.x} ${idBL.y} L ${idBR.x} ${idBR.y} L ${idKR.x} ${idKR.y} L ${idR.x} ${idR.y} Z` : `M ${idL.x} ${idL.y} L ${idBL.x} ${idBL.y} L ${idBR.x} ${idBR.y} L ${idR.x} ${idR.y} Z`;
+                        elHtml += `<path d="${idStr}" fill="#000" opacity="0.4"/>`;
+                    }
+                    
+                    if (cat === 'packer') {
+                        let eY = (tL.y + bL.y) / 2;
+                        elHtml += `<rect x="${tL.x-2}" y="${eY-4}" width="${wid+4}" height="8" fill="#1e293b" filter="url(#shadow)"/><path d="M ${tL.x} ${tL.y+1} L ${tL.x-3} ${tL.y+6} L ${tL.x} ${tL.y+6} Z M ${tR.x} ${tR.y+1} L ${tR.x+3} ${tR.y+6} L ${tR.x} ${tR.y+6} Z" fill="#e2e8f0" stroke="#0f172a"/>`;
+                    } else if (cat === 'scsssv') { elHtml += `<line x1="${tL.x+2}" y1="${bL.y-3}" x2="${tR.x-2}" y2="${tR.y+3}" stroke="#1e293b" stroke-width="2"/>`; }
+                    else if (cat === 'bridge_plug') { let cw=wid*0.35; elHtml += `<path d="M ${tL.x+(wid/2-cw/2)} ${tL.y} L ${bL.x+(wid/2-cw/2)} ${bL.y} L ${bR.x-(wid/2-cw/2)} ${bR.y} L ${tR.x-(wid/2-cw/2)} ${tR.y} Z" fill="#334155"/><line x1="${tL.x}" y1="${tL.y}" x2="${bR.x}" y2="${bR.y}" stroke="#1e293b"/>`; }
+                    else if (cat === 'cement_plug') { elHtml += `<path d="${pStr}" fill="url(#cement)"/>`; }
+                    
+                    svg.innerHTML += elHtml + '</g>';
+                    if (AppState.labels[it.sl]) lblQueue.push({ sl: it.sl, name: nm, top: it.top, color: it.color || "#475569", midY: (tL.y+bL.y)/2, anchorX: tL.x });
+                });
+
+                lblQueue.sort((a,b) => a.midY - b.midY);
+                let curY = CONFIG.svgConfig.startY + 15; let lblHtml = '';
+                
+                let shape = val('lblShape') || 'line';
+                let sz = parseFloat(val('lblSize')) || 1.0;
+                let boxH = 14 * sz;
+                let fontSz = 7.5 * sz;
+                let strokeCol = (ctx.bgTheme==='none'||ctx.bgTheme==='grid_light')?"#64748b":"#cbd5e1";
+                let fillCol = (ctx.bgTheme==='none'||ctx.bgTheme==='grid_light')?"#fff":"#1e293b";
+                let textCol = (ctx.bgTheme==='none'||ctx.bgTheme==='grid_light')?"#0f172a":"#f8fafc";
+
+                lblQueue.forEach(lbl => {
+                    let reqGap = 20 * sz;
+                    if(curY < lbl.midY - (reqGap*2)) curY = lbl.midY - (reqGap/2); 
+                    lbl.aY = curY; curY += reqGap; 
+                    let tStr = lbl.sl !== '-' ? `[Sl.${lbl.sl}] ${lbl.name} (${lbl.top}${unitLabel})` : `${lbl.name} (${lbl.top}${unitLabel})`;
+                    let tW = (tStr.length * 4.5 + 10) * sz;
+                    
+                    let connectorHtml = '';
+
+                    if (shape === 'direct_line') {
+                        let maxW = 9.625;
+                        for(let c of allCasings) { if (lbl.top <= c.d && c.w > maxW) maxW = c.w; }
+                        for(let l of allLiners) { if (lbl.top >= l.t && lbl.top <= l.b && l.w > maxW) maxW = l.w; }
+                        let casingOuterX = ctx.getXY(lbl.midY, -(maxW * ctx.sPx / 2)).x;
+                        connectorHtml = `<line x1="${6+tW}" y1="${lbl.aY}" x2="${casingOuterX}" y2="${lbl.midY}" stroke="${strokeCol}" stroke-width="1.5" stroke-dasharray="2,2"/>
+                                         <circle cx="${casingOuterX}" cy="${lbl.midY}" r="2" fill="${lbl.color}"/>`;
+                    } else {
+                        connectorHtml = `<line x1="${6+tW}" y1="${lbl.aY}" x2="${lbl.anchorX-2}" y2="${lbl.midY}" stroke="${strokeCol}" stroke-width="0.75" stroke-dasharray="2,2"/>`;
+                    }
+
+                    lblHtml += `
+                        <g class="interactive-item">
+                            ${connectorHtml}
+                            <rect x="6" y="${lbl.aY - boxH/2}" width="${tW}" height="${boxH}" fill="${fillCol}" stroke="${lbl.color}" stroke-width="${1*sz}" rx="${3*sz}" filter="url(#shadow)"/>
+                            <text x="${6 + 4*sz}" y="${lbl.aY + (fontSz*0.35)}" font-size="${fontSz}px" font-weight="800" fill="${textCol}">${tStr}</text>
+                        </g>
+                    `;
+                });
+                svg.innerHTML += lblHtml;
+            }
+        };
+
+        const StorageManager = {
+            save: () => {
+                if(!Validator.check()) {
+                    alert("আপনার ডেটায় কিছু ভুল বা অসম্পূর্ণ তথ্য রয়েছে (লাল বর্ডারযুক্ত ইনপুট চেক করুন)।");
+                    return;
+                }
+                TableManager.syncData();
+                let name = (val('fieldName') || "Field") + "_" + (val('wellNo') || "Well");
+                let file = prompt("Enter File Name for Local Save:", name);
+                if (!file) return;
+
+                let data = { state: AppState, dynData: {f1: DynamicFields.f1, f5: DynamicFields.f5} };
+                document.querySelectorAll('.input-panel input:not([type="color"]):not([type="file"]), .input-panel select').forEach(el => { if(el.id) data[el.id] = el.type === 'checkbox' ? el.checked : el.value; });
+                localStorage.setItem('WPROFILE_' + file, JSON.stringify(data));
+                alert('✅ Local Save Successful!'); AppController.loadSavedList();
+            }
+        };
+
+        const ExportManager = {
+            syncWithEnterpriseAPI: () => {
+                if(!Validator.check()) { alert("Please correct validation errors before API Sync."); return; }
+                const payload = { timestamp: new Date().toISOString(), unit: UnitManager.isFeet ? 'ft' : 'm', data: AppState };
+                console.log("Enterprise API Sync Payload:", payload);
+                alert("Enterprise API Endpoint Integration Placeholder.\n\nData has been packaged to console.\nReady to POST to remote server.");
+            }
+        };
+
+        const InteractionManager = {
+            selectedElement: null, offset: { x: 0, y: 0 }, transform: { x: 0, y: 0, s: 1 },
+            init: () => { const svg = $('schematic-svg'); svg.addEventListener('mousedown', InteractionManager.startDrag); svg.addEventListener('mousemove', InteractionManager.drag); window.addEventListener('mouseup', InteractionManager.endDrag); svg.addEventListener('mouseleave', InteractionManager.endDrag); svg.addEventListener('wheel', InteractionManager.scaleElement, {passive: false}); },
+            getMousePosition: (evt) => { const svg = $('schematic-svg'); let CTM = svg.getScreenCTM(); return { x: (evt.clientX - CTM.e) / CTM.a, y: (evt.clientY - CTM.f) / CTM.d }; },
+            startDrag: (evt) => { let target = evt.target.closest('.interactive-item'); if (target) { InteractionManager.selectedElement = target; InteractionManager.offset = InteractionManager.getMousePosition(evt); const svg = $('schematic-svg'); let transforms = target.transform.baseVal; if (transforms.length === 0 || transforms.getItem(0).type !== SVGTransform.SVG_TRANSFORM_TRANSLATE) { let translate = svg.createSVGTransform(); translate.setTranslate(0, 0); transforms.insertItemBefore(translate, 0); } if (transforms.length === 1 || transforms.getItem(1).type !== SVGTransform.SVG_TRANSFORM_SCALE) { let scale = svg.createSVGTransform(); scale.setScale(1, 1); transforms.insertItemBefore(scale, 1); } InteractionManager.transform.x = transforms.getItem(0).matrix.e; InteractionManager.transform.y = transforms.getItem(0).matrix.f; InteractionManager.transform.s = transforms.getItem(1).matrix.a; InteractionManager.offset.x -= InteractionManager.transform.x; InteractionManager.offset.y -= InteractionManager.transform.y; } },
+            drag: (evt) => { if (InteractionManager.selectedElement) { evt.preventDefault(); let coord = InteractionManager.getMousePosition(evt); let dx = coord.x - InteractionManager.offset.x; let dy = coord.y - InteractionManager.offset.y; InteractionManager.selectedElement.transform.baseVal.getItem(0).setTranslate(dx, dy); } },
+            endDrag: (evt) => { InteractionManager.selectedElement = null; },
+            scaleElement: (evt) => { let target = evt.target.closest('.interactive-item'); if (target) { evt.preventDefault(); let scaleAmount = evt.deltaY > 0 ? 0.95 : 1.05; const svg = $('schematic-svg'); let transforms = target.transform.baseVal; if (transforms.length === 0 || transforms.getItem(0).type !== SVGTransform.SVG_TRANSFORM_TRANSLATE) { let translate = svg.createSVGTransform(); translate.setTranslate(0, 0); transforms.insertItemBefore(translate, 0); } if (transforms.length === 1 || transforms.getItem(1).type !== SVGTransform.SVG_TRANSFORM_SCALE) { let scale = svg.createSVGTransform(); scale.setScale(1, 1); transforms.insertItemBefore(scale, 1); } let currentScaleX = transforms.getItem(1).matrix.a; let currentScaleY = transforms.getItem(1).matrix.d; let newScaleX = currentScaleX * scaleAmount; let newScaleY = currentScaleY * scaleAmount; let bbox = target.getBBox(); let cx = bbox.x + bbox.width / 2; let cy = bbox.y + bbox.height / 2; transforms.getItem(1).setScale(newScaleX, newScaleY); let tx = transforms.getItem(0).matrix.e; let ty = transforms.getItem(0).matrix.f; let dx = cx * (currentScaleX - newScaleX); let dy = cy * (currentScaleY - newScaleY); transforms.getItem(0).setTranslate(tx + dx, ty + dy); } }
+        };
+
+        const AppController = {
+            init: (mode) => {
+                $('startup-modal').style.display = 'none';
+                window.appInitialized = true; 
+                
+                if (mode === 'new' || mode === 'demo') {
+                    document.querySelectorAll('.input-panel input:not([type="checkbox"]):not([type="color"]):not([type="file"]), .input-panel select:not(#layoutStyle):not(#toolShapeStyle):not(#casingRenderStyle):not(#casingGeometry):not(#bgTheme)').forEach(el => el.value = '');
+                    $('kopDepth').value = '200'; $('inclination').value = '50'; $('azimuth').value = '0'; $('wellType').value = 'Deviated';
+                    $('globalWidthScale').value = '1.0'; $('lblSize').value = '1.0';
+                    $('prnFontSize').value = '10'; $('prnTitleSize').value = '20'; $('prnDensity').value = '6';
+                    $('scaleInc').value = '1.0'; $('scaleKop').value = '1.0';
+                    
+                    if($('casingShoeStyle')) $('casingShoeStyle').value = 'standard';
+                    if($('lblShape')) $('lblShape').value = 'line';
+
+                    AppState.labels = {}; DynamicFields.f1 = []; DynamicFields.f5 = []; AppState.externalOverlayDataUrl = null; $('externalDiagramInput').value = '';
+                    
+                    if(mode === 'demo') {
+                        $('custName').value = "International Energy Corp."; $('fieldName').value = "Alpha Field"; $('wellNo').value = "AF-01"; $('targetTvd').value = "3150"; 
+                        AppState.casings = [
+                            { type: '30" Cond. Casing', otherValue: '', depth: '50', wt: '118', gr: 'K-55', th: 'BTC' },
+                            { type: '20" Surf. Casing', otherValue: '', depth: '250', wt: '94', gr: 'K-55', th: 'BTC' },
+                            { type: '13-3/8" Int. Casing', otherValue: '', depth: '1500', wt: '68', gr: 'N-80', th: 'BTC' },
+                            { type: '9-5/8" Prod. Casing', otherValue: '', depth: '3050', wt: '47', gr: 'P-110', th: 'VAM' }
+                        ];
+                        AppState.liners = [];
+                        AppState.string = [TableManager.createToolObj(1, 0, 15, '#e11d48', "Tubing hanger", "3.5")];
+                        AppState.packer = [TableManager.createToolObj(2, 2900, 2906, '#16a34a', "Permanent Packer", "6.0")];
+                        AppState.bps = [{ sl: 3, type: 'Bridge Plug', otherValue:'', size: '7', top: 3100, btm: 3104, color: '#475569', vScale: 1, vOrigin: 'center_s' }];
+                        AppState.perfs = [{top: 2950, btm: 2955}];
+                        AppState.lithos = [{top: 2900, btm: 3000, name: "Sandstone"}];
+                    } else { 
+                        AppState.casings = [
+                            { type: '30" Cond. Casing', otherValue: '', depth: '', wt: '', gr: '', th: '' },
+                            { type: '20" Surf. Casing', otherValue: '', depth: '', wt: '', gr: '', th: '' },
+                            { type: '13-3/8" Int. Casing', otherValue: '', depth: '', wt: '', gr: '', th: '' },
+                            { type: '9-5/8" Prod. Casing', otherValue: '', depth: '', wt: '', gr: '', th: '' }
+                        ];
+                        AppState.liners = [
+                            { size: '7" Liner', otherValue: '', top: '', btm: '', wt: '', gr: '', th: '' }
+                        ];
+                        AppState.string = []; AppState.packer = []; AppState.bps = []; AppState.perfs = []; AppState.lithos = []; AppState.enlargeRules = []; AppState.compressRules = []; 
+                        TableManager.renderInputTables(); 
+                        TableManager.addRow('string'); TableManager.addRow('packer'); 
+                    }
+                    
+                    DynamicFields.renderInputs('f1'); DynamicFields.renderInputs('f5'); TableManager.renderInputTables(); TableManager.syncData(); UIHelper.toggleWellTypeFields(); 
+                }
+            },
+            loadSavedList: () => { 
+                const list = $('saved-list'); list.innerHTML = ''; 
+                Object.keys(localStorage).filter(k => k.startsWith('WPROFILE_')).forEach(key => { 
+                    list.innerHTML += `<li><span>📂 ${key.replace('WPROFILE_', '')}</span><button class="btn-primary btn-xs" onclick="window.AppController.loadProfile('${key}')">Load</button></li>`; 
+                }); 
+            },
+            loadProfile: (key) => { 
+                try {
+                    const data = JSON.parse(localStorage.getItem(key)); 
+                    Object.keys(data).forEach(id => { 
+                        if (id !== 'state' && id !== 'dynData' && $(id)) $(id).type === 'checkbox' ? $(id).checked = data[id] : $(id).value = data[id]; 
+                    }); 
+                    Object.assign(AppState, data.state || { casings: [], liners: [], tubing: [], string: [], packer: [], bps: [], perfs: [], lithos: [], enlargeRules: [], compressRules: [], labels: {}, externalOverlayDataUrl: null }); 
+                    
+                    if (!AppState.casings || AppState.casings.length === 0) {
+                        AppState.casings = [
+                            { type: '30" Cond. Casing', otherValue: '', depth: '', wt: '', gr: '', th: '' },
+                            { type: '20" Surf. Casing', otherValue: '', depth: '', wt: '', gr: '', th: '' },
+                            { type: '13-3/8" Int. Casing', otherValue: '', depth: '', wt: '', gr: '', th: '' },
+                            { type: '9-5/8" Prod. Casing', otherValue: '', depth: '', wt: '', gr: '', th: '' }
+                        ];
+                        AppState.liners = [{ size: '7" Liner', otherValue: '', top: '', btm: '', wt: '', gr: '', th: '' }];
+                    }
+
+                    if (data.dynData) { DynamicFields.f1 = data.dynData.f1 || []; DynamicFields.f5 = data.dynData.f5 || []; } else { DynamicFields.f1 = []; DynamicFields.f5 = []; } 
+                    DynamicFields.renderInputs('f1'); DynamicFields.renderInputs('f5'); $('startup-modal').style.display = 'none'; 
+                    UIHelper.toggleLithoInput(); UIHelper.toggleWellTypeFields(); UIHelper.updateStyles(); 
+                    TableManager.renderInputTables(); TableManager.syncData(); 
+                } catch(e) { alert('ফাইলটি লোড করতে সমস্যা হচ্ছে।'); }
+            },
+            render: () => { OutputGenerator.updateTextFields(); OutputGenerator.updateOutputTables(); OutputGenerator.drawSVG(); }
+        };
+
+        window.AppController = AppController;
+        window.TableManager = TableManager;
+        window.UIHelper = UIHelper;
+        window.StorageManager = StorageManager;
+        window.ExportManager = ExportManager;
+        window.UnitManager = UnitManager;
+        window.DynamicFields = DynamicFields;
+        window.ExternalOverlay = ExternalOverlay;
+        window.AppState = AppState;
+        window.Validator = Validator;
+
+        window.onload = () => { 
+            AppController.loadSavedList(); 
+            UIHelper.toggleWellTypeFields(); 
+            UIHelper.updateStyles(); 
+            InteractionManager.init(); 
+            window.appInitialized = false; 
+        };
+
+    </script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getDatabase, ref, set, get, child, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD4L--LRvir6w9r3atmKMM_cMjl9u6Yuag",
+            authDomain: "completion-profile.firebaseapp.com",
+            databaseURL: "https://completion-profile-default-rtdb.firebaseio.com/", 
+            projectId: "completion-profile",
+            storageBucket: "completion-profile.firebasestorage.app",
+            messagingSenderId: "407267850889",
+            appId: "1:407267850889:web:ae5e7c28aab139128ee458",
+            measurementId: "G-JSNB81RDMK"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const auth = getAuth(app);
+        const database = getDatabase(app); 
+        const provider = new GoogleAuthProvider();
+
+        let currentUser = null;
+
+        window.FirebaseAuthManager = {
+            loginWithGoogle: async () => {
+                try {
+                    await signInWithPopup(auth, provider);
+                } catch (error) {
+                    console.error("Login Error:", error);
+                    alert("লগইন ব্যর্থ হয়েছে: " + error.message);
+                }
+            },
+            loginWithEmail: async () => {
+                const email = document.getElementById('auth-email').value;
+                const password = document.getElementById('auth-password').value;
+                if(!email || !password) { alert("দয়া করে ইমেইল এবং পাসওয়ার্ড দিন!"); return; }
+                try {
+                    await signInWithEmailAndPassword(auth, email, password);
+                } catch(error) {
+                    alert("লগইন ব্যর্থ হয়েছে! সঠিক ইমেইল বা পাসওয়ার্ড দিন।\n" + error.message);
+                }
+            },
+            signUpWithEmail: async () => {
+                const email = document.getElementById('auth-email').value;
+                const password = document.getElementById('auth-password').value;
+                if(!email || !password) { alert("দয়া করে ইমেইল এবং পাসওয়ার্ড দিন!"); return; }
+                try {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                    alert("✅ একাউন্ট সফলভাবে তৈরি হয়েছে! এখন আপনি কাজ শুরু করতে পারেন।");
+                } catch(error) {
+                    alert("একাউন্ট তৈরি ব্যর্থ হয়েছে: " + error.message);
+                }
+            },
+            logout: async () => {
+                try {
+                    await signOut(auth);
+                    location.reload();
+                } catch (error) {
+                    console.error("Logout Error:", error);
+                }
+            }
+        };
+
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            const authModal = document.getElementById('auth-modal');
+            const startupModal = document.getElementById('startup-modal');
+            const userInfo = document.getElementById('user-info');
+
+            if (user) {
+                authModal.style.display = 'none';
+                if (!window.appInitialized) { startupModal.style.display = 'flex'; }
+                userInfo.style.display = 'inline-block';
+                userInfo.innerText = `👤 ${user.email || user.displayName}`;
+                window.AppController.loadCloudSavedList(); 
+            } else {
+                authModal.style.display = 'flex';
+                startupModal.style.display = 'none';
+                userInfo.style.display = 'none';
+                window.appInitialized = false;
+            }
+        });
+
+        window.StorageManager.saveToCloud = async () => {
+            if (!currentUser) {
+                alert("ক্লাউডে সেভ করার জন্য আগে লগইন করুন!");
+                return;
+            }
+            if(!window.Validator.check()) {
+                alert("আপনার ডেটায় কিছু ভুল বা অসম্পূর্ণ তথ্য রয়েছে (লাল বর্ডারযুক্ত ইনপুট চেক করুন)।");
+                return;
+            }
+
+            window.TableManager.syncData();
+            let name = (document.getElementById('fieldName').value || "Field") + "_" + (document.getElementById('wellNo').value || "Well");
+            let file = prompt("Enter File Name to save in Cloud:", name);
+            if (!file) return;
+
+            let data = { state: window.AppState, dynData: { f1: window.DynamicFields.f1, f5: window.DynamicFields.f5 } };
+            document.querySelectorAll('.input-panel input:not([type="color"]):not([type="file"]), .input-panel select').forEach(el => { 
+                if(el.id) data[el.id] = el.type === 'checkbox' ? el.checked : el.value; 
+            });
+
+            try {
+                const dbRef = ref(database, 'users/' + currentUser.uid + '/profiles/' + file);
+                await set(dbRef, {
+                    profileName: file,
+                    profileData: JSON.stringify(data),
+                    timestamp: Date.now()
+                });
+                alert('✅ ক্লাউডে সফলভাবে সেভ হয়েছে!');
+                window.AppController.loadCloudSavedList();
+            } catch (error) {
+                console.error("Error saving document: ", error);
+                alert("ডেটা সেভ করতে সমস্যা হয়েছে। অনুগ্রহ করে ডেটাবেসের পারমিশন চেক করুন।");
+            }
+        };
+
+        window.AppController.loadCloudSavedList = () => {
+            if (!currentUser) return;
+            const list = document.getElementById('cloud-saved-list');
+            const activeList = document.getElementById('active-cloud-list');
+            const loadingHtml = '<li>লোড হচ্ছে...</li>';
+            
+            if(list) list.innerHTML = loadingHtml;
+            if(activeList) activeList.innerHTML = loadingHtml;
+            
+            const userProfilesRef = ref(database, 'users/' + currentUser.uid + '/profiles');
+            
+            onValue(userProfilesRef, (snapshot) => {
+                let htmlContent = '';
+                if (snapshot.exists()) {
+                    snapshot.forEach((childSnapshot) => {
+                        const docData = childSnapshot.val();
+                        const docId = childSnapshot.key;
+                        htmlContent += `
+                            <li>
+                                <span>☁️ ${docData.profileName}</span>
+                                <button class="btn-cloud btn-xs" onclick="window.AppController.loadProfileFromCloud('${docId}')">Load File</button>
+                            </li>`;
+                    });
+                } else {
+                    htmlContent = '<li style="padding:8px; font-size:12px;">কোনো ক্লাউড প্রোফাইল পাওয়া যায়নি।</li>';
+                }
+                
+                if(list) list.innerHTML = htmlContent;
+                if(activeList) activeList.innerHTML = htmlContent;
+
+            }, (error) => {
+                console.error("Error loading data: ", error);
+                const errorHtml = '<li style="color:red; padding:8px;">ডেটা লোড করতে সমস্যা হয়েছে। Firebase Rules চেক করুন।</li>';
+                if(list) list.innerHTML = errorHtml;
+                if(activeList) activeList.innerHTML = errorHtml;
+                alert("ডেটা লোড করা যাচ্ছে না: " + error.message);
+            });
+        };
+
+        window.AppController.loadProfileFromCloud = async (docId) => {
+            if (!currentUser) return;
+            try {
+                const dbRef = ref(database);
+                const snapshot = await get(child(dbRef, `users/${currentUser.uid}/profiles/${docId}`));
+                
+                if (snapshot.exists()) {
+                    const data = JSON.parse(snapshot.val().profileData);
+                    
+                    Object.keys(data).forEach(id => { 
+                        if (id !== 'state' && id !== 'dynData' && document.getElementById(id)) {
+                            document.getElementById(id).type === 'checkbox' ? document.getElementById(id).checked = data[id] : document.getElementById(id).value = data[id]; 
+                        }
+                    }); 
+                    
+                    Object.assign(window.AppState, data.state || { casings: [], liners: [], tubing: [], string: [], packer: [], bps: [], perfs: [], lithos: [], enlargeRules: [], compressRules: [], labels: {}, externalOverlayDataUrl: null }); 
+                    
+                    if (!window.AppState.casings || window.AppState.casings.length === 0) {
+                        window.AppState.casings = [
+                            { type: '30" Cond. Casing', otherValue: '', depth: '', wt: '', gr: '', th: '' },
+                            { type: '20" Surf. Casing', otherValue: '', depth: '', wt: '', gr: '', th: '' },
+                            { type: '13-3/8" Int. Casing', otherValue: '', depth: '', wt: '', gr: '', th: '' },
+                            { type: '9-5/8" Prod. Casing', otherValue: '', depth: '', wt: '', gr: '', th: '' }
+                        ];
+                        window.AppState.liners = [{ size: '7" Liner', otherValue: '', top: '', btm: '', wt: '', gr: '', th: '' }];
+                    }
+
+                    if (data.dynData) { window.DynamicFields.f1 = data.dynData.f1 || []; window.DynamicFields.f5 = data.dynData.f5 || []; } 
+                    else { window.DynamicFields.f1 = []; window.DynamicFields.f5 = []; } 
+                    
+                    window.DynamicFields.renderInputs('f1'); window.DynamicFields.renderInputs('f5'); 
+                    document.getElementById('startup-modal').style.display = 'none'; 
+                    document.getElementById('cloud-files-modal').style.display = 'none';
+                    window.appInitialized = true;
+                    window.UIHelper.toggleLithoInput(); window.UIHelper.toggleWellTypeFields(); window.UIHelper.updateStyles(); 
+                    window.TableManager.renderInputTables(); window.TableManager.syncData();
+                } else {
+                    alert("ডেটা খুঁজে পাওয়া যায়নি!");
+                }
+            } catch (error) {
+                console.error("Error fetching document:", error);
+                alert("ডেটা লোড করতে সমস্যা হয়েছে!");
+            }
+        };
+    </script>
+</body>
+</html>
